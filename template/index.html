@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>NANDPU · Circuit #8 签字页</title>
+<title>NANDPU · Circuit #9 签字页</title>
 <style>
   :root { color-scheme: dark; }
   body { margin:0; background:#0b0e13; color:#e6edf3; font-family:-apple-system,"PingFang SC",sans-serif; }
@@ -33,15 +33,15 @@
 <body>
 <main>
   <div class="eyebrow">TAPEOUT · BNB SMART CHAIN</div>
-  <h1>NANDPU Circuit #8<br/>Binary Neuron (Majority-4)</h1>
-  <p class="lede">第一颗链上神经元：4 输入加权求和（Dot4-U4）+ 阈值放电（Threshold-GE U10）。本页只请求你的钱包做一件事——签署这一笔流片交易。页面不读、不存私钥，也不会自动发送。</p>
+  <h1>NANDPU Circuit #9<br/>XOR MLP (2-2-1)</h1>
+  <p class="lede">链上第一颗多层神经网络：2 输入 → 2 隐层神经元 → 1 输出，计算 XOR（4/4 向量零错误；权重由网格搜索训练并冻结，链上模型 = 训练 artifact 字节一致）。本页只请求你的钱包做一件事——签署这一笔流片交易。页面不读、不存私钥，也不会自动发送。</p>
 
   <div class="notice" id="notice">正在校验交易清单…</div>
 
   <div class="card" id="facts" style="display:none">
-    <div class="row"><span>电路 ID（预期）</span><b>#8</b></div>
+    <div class="row"><span>电路 ID（预期）</span><b>#9</b></div>
     <div class="row"><span>显式燃烧</span><b>2 NAND · 0 LATCH</b></div>
-    <div class="row"><span>展开逻辑</span><b>1,623 门（REF #6 + #7）</b></div>
+    <div class="row"><span>展开逻辑</span><b>3,363 门（REF #6 ×2 + #7 ×3 + #2）</b></div>
     <div class="row"><span>目标合约</span><b><code id="to">0x86332F5BF2448b726AC4e4B427d16101bE3a28aA</code></b></div>
     <div class="row"><span>发送金额</span><b>0 BNB</b></div>
     <div class="row"><span>创建者钱包</span><b><code id="from">0x71c258DBBDf364a2204f010dc981493a33a9A720</code></b></div>
@@ -79,9 +79,9 @@
 const EXPECTED = {
   chainId: "0x38",
   mode: "UNSIGNED_SINGLE_CIRCUIT_RELEASE",
-  currentNextId: "7",
-  expectedCircuitId: "8",
-  circuit: "neuron-majority4",
+  currentNextId: "8",
+  expectedCircuitId: "9",
+  circuit: "xor-mlp-2x2x1",
   nandBurn: 2,
   to: "0x86332F5BF2448b726AC4e4B427d16101bE3a28aA",
   creator: "0x71c258DBBDf364a2204f010dc981493a33a9A720",
@@ -129,10 +129,10 @@ async function ensureBsc(p) {
         || item.transaction.chainId !== EXPECTED.chainId
         || item.transaction.value !== "0x0"
         || !item.transaction.data.startsWith("0x7bd3ac1d")) {
-      throw new Error("Circuit #8 交易清单校验失败（或交易方法不是 tapeout），本页已停止。");
+      throw new Error("Circuit #9 交易清单校验失败（或交易方法不是 tapeout），本页已停止。");
     }
     manifest = item.transaction;
-    $("notice").textContent = "清单校验通过：Circuit #8 · 2 NAND · 0 BNB。请用创建者钱包连接。";
+    $("notice").textContent = "清单校验通过：Circuit #9 · 2 NAND · 0 BNB。请用创建者钱包连接。";
     $("notice").classList.add("ok");
     $("facts").style.display = "block";
     $("connect").style.display = "block";
@@ -192,7 +192,7 @@ $("sign").addEventListener("click", async () => {
     if (!p) throw new Error("钱包 Provider 已断开");
     await ensureBsc(p);
     const nextId = await liveNextId(p);
-    if (nextId !== 7n) throw new Error("链上 nextId=" + nextId + "，本交易要求 7。请停止并重新生成清单。");
+    if (nextId !== 8n) throw new Error("链上 nextId=" + nextId + "，本交易要求 8。请停止并重新生成清单。");
     $("status").textContent = "正在估计 gas…";
     await p.request({ method: "eth_estimateGas", params: [manifest] });
     $("status").textContent = "等待你在钱包弹窗中核对并确认…";
