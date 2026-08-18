@@ -1,11 +1,240 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"/><title>NANDPU · 签字窗口已关闭</title>
-<style>body{margin:0;background:#0b0e13;color:#e6edf3;font-family:-apple-system,sans-serif;display:flex;justify-content:center;padding-top:15vh}
-main{max-width:560px;padding:0 16px;text-align:center}
-h1{font-size:26px}.ok{color:#7ee787}a{color:#58a6ff}code{color:#7ee787}</style></head>
-<body><main>
-<div class="ok">✔ Circuit #9 已上链并验证</div>
-<h1>签字窗口已关闭</h1>
-<p>NANDPU Circuit #9「XOR MLP (2-2-1)」已于 2026-08-18 流片成功：链上接口 2/1/0、展开 3,363 门，4/4 组 XOR 向量穷举验证与训练 artifact 一致（交易 <code>0xbba3258bddc279bfb7b82a2ed0eaf37735cc423b70edf3715c06d78d0f510ebf</code>）。本页的未签名清单已作废，不再提供任何签名功能。</p>
-<p><a href="https://bscscan.com/tx/0xbba3258bddc279bfb7b82a2ed0eaf37735cc423b70edf3715c06d78d0f510ebf">在 BscScan 查看交易 ↗</a> · <a href="https://tapeout.net/#p/0x86332F5BF2448b726AC4e4B427d16101bE3a28aA">在 TapeOut 查看 NANDPU →</a></p>
-</main></body></html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NANDPU · Circuits #10-#13 批量签字页</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; background:#0b0e13; color:#e6edf3; font-family:-apple-system,"PingFang SC",sans-serif; }
+  main { max-width:680px; margin:0 auto; padding:24px 16px 64px; }
+  .eyebrow { color:#8b949e; font-size:12px; letter-spacing:.15em; text-transform:uppercase; }
+  h1 { font-size:28px; margin:8px 0 4px; }
+  .lede { color:#a5b1bd; line-height:1.6; }
+  .card { background:#151a22; border:1px solid #232b36; border-radius:12px; padding:18px; margin:16px 0; }
+  .row { display:flex; justify-content:space-between; gap:8px; padding:6px 0; border-bottom:1px dashed #232b36; }
+  .row:last-child { border-bottom:none; }
+  .row span { color:#8b949e; }
+  .row b { text-align:right; word-break:break-all; }
+  .tx { border:1px solid #232b36; border-radius:12px; padding:14px; margin:12px 0; background:#10151c; }
+  .tx.done { border-color:#2ea043; }
+  .tx h3 { margin:0 0 6px; font-size:16px; }
+  .tx .meta { color:#8b949e; font-size:13px; margin:4px 0; }
+  .tx .meta b { color:#e6edf3; }
+  code { color:#7ee787; font-size:13px; }
+  button { width:100%; padding:12px; border:none; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; }
+  .primary { background:#2ea043; color:#fff; }
+  .secondary { background:#21262d; color:#e6edf3; margin-top:8px; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .notice { background:#1a2332; border:1px solid #30363d; border-radius:10px; padding:12px; margin:12px 0; font-size:14px; }
+  .notice.ok { border-color:#2ea043; }
+  label.confirm { display:flex; gap:10px; align-items:flex-start; margin:14px 0; font-size:14px; color:#f0b429; }
+  .status { margin-top:8px; font-size:13px; color:#8b949e; }
+  .status.ok { color:#7ee787; }
+  a { color:#58a6ff; }
+  .warn { color:#f85149; }
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">TAPEOUT · BNB SMART CHAIN</div>
+  <h1>NANDPU Circuits #10-#13<br/>批量签字页（4 笔独立交易）</h1>
+  <p class="lede">四颗大脑器官一次窗口、逐笔签字：#10 符号层（有符号乘法器）→ #11 Latch 单元 → #12 4 位寄存器 → #13 8 位心跳计数器。每笔都是独立交易，钱包逐笔弹窗确认；可随时停止，已签的永久生效，未签的关页后作废。页面不读、不存私钥，也不会自动发送。</p>
+
+  <div class="notice" id="notice">正在校验交易清单…</div>
+
+  <div class="card" id="facts" style="display:none">
+    <div class="row"><span>批次</span><b>4 笔 · #10 → #13</b></div>
+    <div class="row"><span>显式燃烧合计</span><b>597 NAND · 13 LATCH</b></div>
+    <div class="row"><span>目标合约</span><b><code id="to">0x86332F5BF2448b726AC4e4B427d16101bE3a28aA</code></b></div>
+    <div class="row"><span>每笔发送金额</span><b>0 BNB</b></div>
+    <div class="row"><span>创建者钱包</span><b><code id="from">0x71c258DBBDf364a2204f010dc981493a33a9A720</code></b></div>
+  </div>
+
+  <button class="primary" id="connect" style="display:none">连接 Binance Wallet</button>
+
+  <div id="txList" style="display:none"></div>
+
+  <div class="card" id="actions" style="display:none">
+    <label class="confirm">
+      <input type="checkbox" id="confirmBurn" />
+      <span>我确认将永久销毁本批共 597 个 NAND 与 13 个 LATCH 晶体管（不可逆），且每笔交易发送金额为 0 BNB。</span>
+    </label>
+    <div class="notice warn" id="compareBox" style="display:block">
+      <b>钱包弹窗逐项对照（防钓鱼）</b>：每一笔弹窗都核对——链 <b>BNB Smart Chain (0x38)</b>、目标合约前 4 位 <b>8633</b>、金额 <b>0 BNB</b>。任何一项不一致，点「拒绝」。
+    </div>
+    <div class="notice">
+      <span>请输入目标合约地址第 3-6 位（<b>332F</b>）以确认你核对过：</span>
+      <input type="text" id="confirmCode" maxlength="4" placeholder="332F"
+             style="margin-top:8px;padding:10px;border-radius:8px;border:1px solid #30363d;background:#0b0e13;color:#e6edf3;font-size:16px;width:120px;text-transform:uppercase" />
+    </div>
+    <div class="status" id="status">未操作</div>
+  </div>
+
+  <div class="notice warn">
+    安全边界：不要向任何人提供助记词或私钥。钱包弹窗中的目标合约应为
+    <code>0x8633…28aA</code>，金额应为 <b>0 BNB</b>；任何一项不一致就拒绝。
+  </div>
+</main>
+<script>
+"use strict";
+const EXPECTED = {
+  chainId: "0x38",
+  mode: "UNSIGNED_BATCH_RELEASE",
+  baseNextId: "9",
+  order: [
+    { circuitId: "10", circuit: "mult-4x4-signed", nand: 483, latch: 0, label: "Signed 4×4 Multiplier (Baugh-Wooley)" },
+    { circuitId: "11", circuit: "latch-cell", nand: 10, latch: 1, label: "LATCH Cell (enabled)" },
+    { circuitId: "12", circuit: "register-4", nand: 40, latch: 4, label: "4-bit Register" },
+    { circuitId: "13", circuit: "counter-8", nand: 64, latch: 8, label: "8-bit Heartbeat Counter" },
+  ],
+  to: "0x86332F5BF2448b726AC4e4B427d16101bE3a28aA",
+  creator: "0x71c258DBBDf364a2204f010dc981493a33a9A720",
+};
+const NEXT_ID_SELECTOR = "0x61b8ce8c";
+const $ = (id) => document.getElementById(id);
+let batch = [], account = "";
+
+function provider() {
+  const w = window;
+  return (w.ethereum && w.ethereum.request ? w.ethereum : null)
+      || (w.BinanceChain ? w.BinanceChain : null);
+}
+function short(v) { return v.slice(0, 6) + "…" + v.slice(-4); }
+
+async function ensureBsc(p) {
+  const chainId = await p.request({ method: "eth_chainId" });
+  if (String(chainId).toLowerCase() === EXPECTED.chainId) return;
+  try {
+    await p.request({ method: "wallet_switchEthereumChain", params: [{ chainId: EXPECTED.chainId }] });
+  } catch (e) {
+    if (e && e.code !== 4902) throw e;
+    await p.request({ method: "wallet_addEthereumChain", params: [{
+      chainId: EXPECTED.chainId, chainName: "BNB Smart Chain",
+      rpcUrls: ["https://bsc-dataseed.binance.org"],
+      nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+      blockExplorerUrls: ["https://bscscan.com"],
+    }] });
+  }
+}
+
+async function liveNextId(p) {
+  const result = await p.request({
+    method: "eth_call",
+    params: [{ to: EXPECTED.to, data: NEXT_ID_SELECTOR }, "latest"],
+  });
+  return BigInt(result);
+}
+
+function renderBatch() {
+  const list = $("txList");
+  list.innerHTML = "";
+  batch.forEach((item, index) => {
+    const spec = EXPECTED.order[index];
+    const box = document.createElement("div");
+    box.className = "tx";
+    box.id = "tx-" + index;
+    box.innerHTML =
+      '<h3>#' + spec.circuitId + ' · ' + spec.label + '</h3>' +
+      '<div class="meta">燃烧 <b>' + spec.nand + ' NAND · ' + spec.latch + ' LATCH</b> · 预估 gas <b>' +
+      Number(item.estimatedGas).toLocaleString() + '</b></div>' +
+      '<div class="meta status" id="txstatus-' + index + '">' + (index === 0 ? '待签名' : '等待前一笔完成') + '</div>' +
+      '<button class="primary" id="txsign-' + index + '"' + (index === 0 ? '' : ' disabled') + '>签署这一笔</button>';
+    list.appendChild(box);
+    $("txsign-" + index).addEventListener("click", () => signOne(index));
+  });
+  $("txList").style.display = "block";
+}
+
+async function signOne(index) {
+  const status = $("txstatus-" + index);
+  try {
+    if (!account) throw new Error("请先连接创建者钱包");
+    if (!$("confirmBurn").checked) throw new Error("请先勾选销毁确认");
+    const code = ($("confirmCode").value || "").trim().toUpperCase();
+    if (code !== "332F") throw new Error("目标合约确认码不正确：请核对页面显示的 332F 后重新输入");
+    const p = provider();
+    if (!p) throw new Error("钱包 Provider 已断开");
+    await ensureBsc(p);
+    const nextId = await liveNextId(p);
+    const required = BigInt(EXPECTED.baseNextId) + BigInt(index);
+    if (nextId !== required) {
+      throw new Error("链上 nextId=" + nextId + "，本笔要求 " + required + "。请停止并重新生成清单。");
+    }
+    const item = batch[index];
+    $("txsign-" + index).disabled = true;
+    status.textContent = "等待你在钱包弹窗中核对并确认…";
+    const hash = await p.request({ method: "eth_sendTransaction", params: [item.transaction] });
+    status.className = "meta status ok";
+    status.innerHTML = '已广播 · <a target="_blank" href="https://bscscan.com/tx/' + hash + '">BscScan ↗</a>';
+    $("tx-" + index).classList.add("done");
+    if (index + 1 < batch.length) {
+      const nextBtn = $("txsign-" + (index + 1));
+      nextBtn.disabled = false;
+      $("txstatus-" + (index + 1)).textContent = "待签名";
+    } else {
+      $("status").className = "status ok";
+      $("status").textContent = "4 笔全部完成 ✅ 通知 NANDPU 执行链上验证。";
+    }
+  } catch (e) {
+    $("txsign-" + index).disabled = false;
+    status.textContent = "已停止 · " + e.message;
+  }
+}
+
+(async function boot() {
+  try {
+    const res = await fetch("manifest.json", { cache: "no-store" });
+    if (!res.ok) throw new Error("清单加载失败");
+    const data = await res.json();
+    if (data.chainId !== 56 || data.mode !== EXPECTED.mode
+        || data.baseNextId !== EXPECTED.baseNextId
+        || data.transactions.length !== EXPECTED.order.length) {
+      throw new Error("批次清单校验失败，本页已停止。");
+    }
+    data.transactions.forEach((item, index) => {
+      const spec = EXPECTED.order[index];
+      if (item.expectedCircuitId !== spec.circuitId
+          || item.circuit !== spec.circuit
+          || item.transistorBurn.NAND !== spec.nand
+          || item.transistorBurn.LATCH !== spec.latch
+          || item.transaction.to.toLowerCase() !== EXPECTED.to.toLowerCase()
+          || item.transaction.chainId !== EXPECTED.chainId
+          || item.transaction.value !== "0x0"
+          || !item.transaction.data.startsWith("0x7bd3ac1d")) {
+        throw new Error("第 " + (index + 1) + " 笔交易清单校验失败（或交易方法不是 tapeout），本页已停止。");
+      }
+    });
+    batch = data.transactions;
+    $("notice").textContent = "清单校验通过：4 笔 · 597 NAND + 13 LATCH · 每笔 0 BNB。请用创建者钱包连接。";
+    $("notice").classList.add("ok");
+    $("facts").style.display = "block";
+    $("connect").style.display = "block";
+    $("actions").style.display = "block";
+    renderBatch();
+  } catch (e) {
+    $("notice").textContent = "已停止：" + e.message;
+  }
+})();
+
+$("connect").addEventListener("click", async () => {
+  try {
+    const p = provider();
+    if (!p) throw new Error("未检测到钱包。请用 Binance Wallet 的 DApp 浏览器打开本页。");
+    await ensureBsc(p);
+    const accounts = await p.request({ method: "eth_requestAccounts" });
+    const selected = accounts && accounts[0];
+    if (!selected || selected.toLowerCase() !== EXPECTED.creator.toLowerCase()) {
+      throw new Error("钱包地址不匹配，必须使用创建者 " + EXPECTED.creator);
+    }
+    account = selected;
+    $("connect").textContent = short(selected) + " · 已连接";
+    $("notice").textContent = "创建者钱包已连接。逐笔签名：每笔弹窗前页面会实时核对链上 nextId。";
+    $("notice").classList.add("ok");
+  } catch (e) {
+    $("notice").textContent = "连接失败：" + e.message;
+  }
+});
+</script>
+</body>
+</html>
