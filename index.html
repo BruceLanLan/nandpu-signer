@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>NANDPU · Circuit #16 签字页</title>
+<title>NANDPU · Circuit #18 签字页</title>
 <style>
   :root { color-scheme: dark; }
   body { margin:0; background:#0b0e13; color:#e6edf3; font-family:-apple-system,"PingFang SC",sans-serif; }
@@ -33,14 +33,14 @@
 <body>
 <main>
   <div class="eyebrow">TAPEOUT · BNB SMART CHAIN</div>
-  <h1>NANDPU Circuit #16<br/>MAC-4 Widened（10-bit 累加器，无 REF 展平版）</h1>
-  <p class="lede">D-022 PoD 应对预案队列第 1/5 颗：链上电路 #5（mac-4-w10-ref）的无 REF 展平双胞胎——同一个 A×B+C 运算，这次全部 338 个 NAND 直接写在这颗电路自己的网表里，不借助任何 REF 调用。触发原因：PoD 评分草案的 g=NAND+LATCH 只读顶层显式网表、不认 REF（docs/pod-era-optimization.md §五）。#5 本身保持不变、继续存活（D-002 不可变性）——这是新增的第 16 颗电路，不是替换。本页只请求你的钱包做一件事——签署这一笔流片交易。页面不读、不存私钥，也不会自动发送。</p>
+  <h1>NANDPU Circuit #18<br/>Dot4-U4（4 项点积，无 REF 展平版）</h1>
+  <p class="lede">D-022 PoD 应对预案队列第 2/5 颗：链上电路 #6（dot4-u4-ref）的无 REF 展平双胞胎——同一个四项 4×4 点积运算，这次全部 1,284 个 NAND 直接写在这颗电路自己的网表里。#6 本身保持不变、继续存活（D-002 不可变性）——这是新增电路，不是替换。<b>本电路原计划编号 #17，因协议层 tapeout() 对调用者无限制，一个无关地址已抢先占用了 #17（nIn=11 nOut=5 gateCount=192，不是本项目电路）——已按当前链上状态重新校验，目标编号 #18。</b>本页只请求你的钱包做一件事——签署这一笔流片交易。页面不读、不存私钥，也不会自动发送。</p>
 
   <div class="notice" id="notice">正在校验交易清单…</div>
 
   <div class="card" id="facts" style="display:none">
-    <div class="row"><span>电路 ID（预期）</span><b>#16</b></div>
-    <div class="row"><span>显式燃烧</span><b>338 NAND · 0 LATCH</b></div>
+    <div class="row"><span>电路 ID（预期）</span><b>#18</b></div>
+    <div class="row"><span>显式燃烧</span><b>1,284 NAND · 0 LATCH</b></div>
     <div class="row"><span>REF 依赖</span><b>无（零 REF，本电路自身即为展平版）</b></div>
     <div class="row"><span>目标合约</span><b><code id="to">0x86332F5BF2448b726AC4e4B427d16101bE3a28aA</code></b></div>
     <div class="row"><span>发送金额</span><b>0 BNB</b></div>
@@ -52,7 +52,7 @@
   <div class="card" id="actions" style="display:none">
     <label class="confirm">
       <input type="checkbox" id="confirmBurn" />
-      <span>我确认将永久销毁 338 个 NAND 晶体管（不可逆），且本笔交易发送金额为 0 BNB。</span>
+      <span>我确认将永久销毁 1,284 个 NAND 晶体管（不可逆），且本笔交易发送金额为 0 BNB。</span>
     </label>
     <div class="notice warn" id="compareBox" style="display:block">
       <b>钱包弹窗逐项对照（防钓鱼）</b>：请在钱包弹窗里核对以下三项与本页完全一致——
@@ -79,10 +79,10 @@
 const EXPECTED = {
   chainId: "0x38",
   mode: "UNSIGNED_SINGLE_CIRCUIT_RELEASE",
-  currentNextId: "15",
-  expectedCircuitId: "16",
-  circuit: "mac-4-widened",
-  nandBurn: 338,
+  currentNextId: "17",
+  expectedCircuitId: "18",
+  circuit: "dot4-u4",
+  nandBurn: 1284,
   latchBurn: 0,
   to: "0x86332F5BF2448b726AC4e4B427d16101bE3a28aA",
   creator: "0x71c258DBBDf364a2204f010dc981493a33a9A720",
@@ -131,10 +131,10 @@ async function ensureBsc(p) {
         || item.transaction.chainId !== EXPECTED.chainId
         || item.transaction.value !== "0x0"
         || !item.transaction.data.startsWith("0x7bd3ac1d")) {
-      throw new Error("Circuit #16 交易清单校验失败（或交易方法不是 tapeout），本页已停止。");
+      throw new Error("Circuit #18 交易清单校验失败（或交易方法不是 tapeout），本页已停止。");
     }
     manifest = item.transaction;
-    $("notice").textContent = "清单校验通过：Circuit #16 · 338 NAND · 0 BNB。请用创建者钱包连接。";
+    $("notice").textContent = "清单校验通过：Circuit #18 · 1,284 NAND · 0 BNB。请用创建者钱包连接。";
     $("notice").classList.add("ok");
     $("facts").style.display = "block";
     $("connect").style.display = "block";
@@ -194,7 +194,7 @@ $("sign").addEventListener("click", async () => {
     if (!p) throw new Error("钱包 Provider 已断开");
     await ensureBsc(p);
     const nextId = await liveNextId(p);
-    if (nextId !== 15n) throw new Error("链上 nextId=" + nextId + "，本交易要求 15。请停止并重新生成清单。");
+    if (nextId !== 17n) throw new Error("链上 nextId=" + nextId + "，本交易要求 17。请停止并重新生成清单。");
     $("status").textContent = "正在估计 gas…";
     await p.request({ method: "eth_estimateGas", params: [manifest] });
     $("status").textContent = "等待你在钱包弹窗中核对并确认…";
