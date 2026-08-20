@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>NANDPU · Circuit #25 签字页</title>
 <style>
   :root { color-scheme: dark; }
@@ -49,6 +52,7 @@
   </div>
 
   <button class="primary" id="connect" style="display:none">连接 Binance Wallet</button>
+  <div class="status" id="connectStatus"></div>
   <div class="card" id="actions" style="display:none">
     <label class="confirm">
       <input type="checkbox" id="confirmBurn" />
@@ -144,22 +148,53 @@ async function ensureBsc(p) {
   }
 })();
 
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(label + "超时（" + (ms / 1000) + "秒无响应）——钱包弹窗可能被挡住了，检查是否有待处理的钱包弹窗，或退出重进本页")), ms)),
+  ]);
+}
+
+// Debug line so a mobile user without devtools can screenshot exactly
+// what failed, instead of "nothing happened" -- report at bootstrap
+// since provider() may already be null even before any click.
+(function reportProviderState() {
+  const w = window;
+  const hasEthereum = !!(w.ethereum && w.ethereum.request);
+  const hasBinanceChain = !!w.BinanceChain;
+  $("connectStatus").textContent =
+    "Provider 检测：window.ethereum=" + hasEthereum + "，window.BinanceChain=" + hasBinanceChain;
+})();
+
 $("connect").addEventListener("click", async () => {
+  const btn = $("connect");
+  const status = $("connectStatus");
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = "连接中…";
+  status.textContent = "① 检测钱包 provider…";
   try {
     const p = provider();
-    if (!p) throw new Error("未检测到钱包。请用 Binance Wallet 的 DApp 浏览器打开本页。");
-    await ensureBsc(p);
-    const accounts = await p.request({ method: "eth_requestAccounts" });
+    if (!p) throw new Error("未检测到钱包 provider（window.ethereum / window.BinanceChain 均为空）。请退出本页重新从 Binance Wallet App 首页打开，而不是用浏览器历史记录/收藏夹里的旧标签页。");
+    status.textContent = "② 确认链为 BNB Smart Chain…";
+    await withTimeout(ensureBsc(p), 15000, "切换链");
+    status.textContent = "③ 等待钱包弹窗授权连接…（如果没有弹窗，检查 App 是否有被遮挡的通知/弹窗）";
+    const accounts = await withTimeout(p.request({ method: "eth_requestAccounts" }), 30000, "请求账户授权");
     const selected = accounts && accounts[0];
-    if (!selected || selected.toLowerCase() !== EXPECTED.creator.toLowerCase()) {
-      throw new Error("钱包地址不匹配，必须使用创建者 " + EXPECTED.creator);
+    if (!selected) throw new Error("钱包未返回任何账户，请在钱包里确认已解锁并选中账户");
+    if (selected.toLowerCase() !== EXPECTED.creator.toLowerCase()) {
+      throw new Error("钱包地址不匹配：当前 " + short(selected) + "，必须使用创建者 " + EXPECTED.creator);
     }
     account = selected;
-    $("connect").textContent = short(selected) + " · 已连接";
+    btn.textContent = short(selected) + " · 已连接";
+    status.textContent = "连接成功 ✓";
     $("actions").style.display = "block";
     $("notice").textContent = "创建者钱包已连接。页面不会自动发送；核对后勾选确认并签名。";
     $("notice").classList.add("ok");
   } catch (e) {
+    btn.disabled = false;
+    btn.textContent = originalText;
+    status.textContent = "已停止 · " + e.message;
     $("notice").textContent = "连接失败：" + e.message;
   }
 });
