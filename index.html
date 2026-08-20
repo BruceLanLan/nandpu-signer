@@ -3,28 +3,33 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>NANDPU · Circuit #19 签字页</title>
+<title>NANDPU · Circuits #20-#21 批量签字页</title>
 <style>
   :root { color-scheme: dark; }
   body { margin:0; background:#0b0e13; color:#e6edf3; font-family:-apple-system,"PingFang SC",sans-serif; }
-  main { max-width:640px; margin:0 auto; padding:24px 16px 64px; }
+  main { max-width:680px; margin:0 auto; padding:24px 16px 64px; }
   .eyebrow { color:#8b949e; font-size:12px; letter-spacing:.15em; text-transform:uppercase; }
-  h1 { font-size:30px; margin:8px 0 4px; }
+  h1 { font-size:28px; margin:8px 0 4px; }
   .lede { color:#a5b1bd; line-height:1.6; }
   .card { background:#151a22; border:1px solid #232b36; border-radius:12px; padding:18px; margin:16px 0; }
   .row { display:flex; justify-content:space-between; gap:8px; padding:6px 0; border-bottom:1px dashed #232b36; }
   .row:last-child { border-bottom:none; }
   .row span { color:#8b949e; }
   .row b { text-align:right; word-break:break-all; }
+  .tx { border:1px solid #232b36; border-radius:12px; padding:14px; margin:12px 0; background:#10151c; }
+  .tx.done { border-color:#2ea043; }
+  .tx h3 { margin:0 0 6px; font-size:16px; }
+  .tx .meta { color:#8b949e; font-size:13px; margin:4px 0; }
+  .tx .meta b { color:#e6edf3; }
   code { color:#7ee787; font-size:13px; }
-  button { width:100%; padding:14px; border:none; border-radius:10px; font-size:16px; font-weight:600; cursor:pointer; }
+  button { width:100%; padding:12px; border:none; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; }
   .primary { background:#2ea043; color:#fff; }
   .secondary { background:#21262d; color:#e6edf3; margin-top:8px; }
   button:disabled { opacity:.45; cursor:not-allowed; }
   .notice { background:#1a2332; border:1px solid #30363d; border-radius:10px; padding:12px; margin:12px 0; font-size:14px; }
   .notice.ok { border-color:#2ea043; }
   label.confirm { display:flex; gap:10px; align-items:flex-start; margin:14px 0; font-size:14px; color:#f0b429; }
-  .status { margin-top:10px; font-size:14px; color:#8b949e; }
+  .status { margin-top:8px; font-size:13px; color:#8b949e; }
   .status.ok { color:#7ee787; }
   a { color:#58a6ff; }
   .warn { color:#f85149; }
@@ -33,39 +38,36 @@
 <body>
 <main>
   <div class="eyebrow">TAPEOUT · BNB SMART CHAIN</div>
-  <h1>NANDPU Circuit #19<br/>Binary Neuron Majority-4（无 REF 展平版）</h1>
-  <p class="lede">D-022 PoD 应对预案队列第 3/5 颗：链上电路 #8（neuron-majority4）的无 REF 展平双胞胎——同一个"四位多数表决"感知器（y = 1 iff b0+b1+b2+b3 >= 2），这次全部 1,337 个 NAND 直接写在这颗电路自己的网表里，不借助任何 REF 调用。#8 本身保持不变、继续存活（D-002 不可变性）——这是新增电路，不是替换。本页只请求你的钱包做一件事——签署这一笔流片交易。页面不读、不存私钥，也不会自动发送。</p>
+  <h1>NANDPU Circuits #20-#21<br/>批量签字页（D-022 队列窗口 4-5/5，2 笔独立交易）</h1>
+  <p class="lede">D-022 PoD 展平双胞胎队列最后两颗：#20 xor-mlp-2x2x1-direct（#9 的无 REF 展平版，2026-08-20 优化过，1,515 门）→ #21 mini-brain-14-direct（#15 的无 REF 展平版，旗舰）。每笔都是独立交易，钱包逐笔弹窗确认，每笔签名前都会重新核对链上 nextId；可随时停止，已签的永久生效，未签的关页后作废。页面不读、不存私钥，也不会自动发送。</p>
 
   <div class="notice" id="notice">正在校验交易清单…</div>
 
   <div class="card" id="facts" style="display:none">
-    <div class="row"><span>电路 ID（预期）</span><b>#19</b></div>
-    <div class="row"><span>显式燃烧</span><b>1,337 NAND · 0 LATCH</b></div>
-    <div class="row"><span>REF 依赖</span><b>无（零 REF，本电路自身即为展平版）</b></div>
+    <div class="row"><span>批次</span><b>2 笔 · #20 → #21</b></div>
+    <div class="row"><span>显式燃烧合计</span><b>4,464 NAND · 4 LATCH</b></div>
     <div class="row"><span>目标合约</span><b><code id="to">0x86332F5BF2448b726AC4e4B427d16101bE3a28aA</code></b></div>
-    <div class="row"><span>发送金额</span><b>0 BNB</b></div>
+    <div class="row"><span>每笔发送金额</span><b>0 BNB</b></div>
     <div class="row"><span>创建者钱包</span><b><code id="from">0x71c258DBBDf364a2204f010dc981493a33a9A720</code></b></div>
-    <div class="row"><span>预估 gas</span><b id="gas">—</b></div>
   </div>
 
   <button class="primary" id="connect" style="display:none">连接 Binance Wallet</button>
+
+  <div id="txList" style="display:none"></div>
+
   <div class="card" id="actions" style="display:none">
     <label class="confirm">
       <input type="checkbox" id="confirmBurn" />
-      <span>我确认将永久销毁 1,337 个 NAND 晶体管（不可逆），且本笔交易发送金额为 0 BNB。</span>
+      <span>我确认将永久销毁本批共 4,464 个 NAND 与 4 个 LATCH 晶体管（不可逆），且每笔交易发送金额为 0 BNB。</span>
     </label>
     <div class="notice warn" id="compareBox" style="display:block">
-      <b>钱包弹窗逐项对照（防钓鱼）</b>：请在钱包弹窗里核对以下三项与本页完全一致——
-      链 <b>BNB Smart Chain (0x38)</b>、目标合约前 4 位 <b id="to4">8633</b>、
-      金额 <b>0 BNB</b>。任何一项不一致，点「拒绝」。
+      <b>钱包弹窗逐项对照（防钓鱼）</b>：每一笔弹窗都核对——链 <b>BNB Smart Chain (0x38)</b>、目标合约前 4 位 <b>8633</b>、金额 <b>0 BNB</b>。任何一项不一致，点「拒绝」。
     </div>
     <div class="notice">
-      <span>请输入目标合约地址第 3-6 位（例如 <b id="hint4">332F</b>）以确认你核对过：</span>
+      <span>请输入目标合约地址第 3-6 位（<b>332F</b>）以确认你核对过：</span>
       <input type="text" id="confirmCode" maxlength="4" placeholder="332F"
              style="margin-top:8px;padding:10px;border-radius:8px;border:1px solid #30363d;background:#0b0e13;color:#e6edf3;font-size:16px;width:120px;text-transform:uppercase" />
     </div>
-    <button class="secondary" id="simulate">只读模拟（不发送）</button>
-    <button class="primary" id="sign" style="margin-top:8px">请求钱包签名</button>
     <div class="status" id="status">未操作</div>
   </div>
 
@@ -78,18 +80,18 @@
 "use strict";
 const EXPECTED = {
   chainId: "0x38",
-  mode: "UNSIGNED_SINGLE_CIRCUIT_RELEASE",
-  currentNextId: "18",
-  expectedCircuitId: "19",
-  circuit: "neuron-majority4-direct",
-  nandBurn: 1337,
-  latchBurn: 0,
+  mode: "UNSIGNED_BATCH_RELEASE",
+  baseNextId: "19",
+  order: [
+    { circuitId: "20", circuit: "xor-mlp-2x2x1-direct", nand: 1515, latch: 0, label: "XOR MLP (2-2-1) Direct — flat twin of #9" },
+    { circuitId: "21", circuit: "mini-brain-14-direct", nand: 2949, latch: 4, label: "Mini-Brain Direct — flat twin of #15" },
+  ],
   to: "0x86332F5BF2448b726AC4e4B427d16101bE3a28aA",
   creator: "0x71c258DBBDf364a2204f010dc981493a33a9A720",
 };
 const NEXT_ID_SELECTOR = "0x61b8ce8c";
 const $ = (id) => document.getElementById(id);
-let manifest = null, account = "";
+let batch = [], account = "";
 
 function provider() {
   const w = window;
@@ -114,31 +116,100 @@ async function ensureBsc(p) {
   }
 }
 
+async function liveNextId(p) {
+  const result = await p.request({
+    method: "eth_call",
+    params: [{ to: EXPECTED.to, data: NEXT_ID_SELECTOR }, "latest"],
+  });
+  return BigInt(result);
+}
+
+function renderBatch() {
+  const list = $("txList");
+  list.innerHTML = "";
+  batch.forEach((item, index) => {
+    const spec = EXPECTED.order[index];
+    const box = document.createElement("div");
+    box.className = "tx";
+    box.id = "tx-" + index;
+    box.innerHTML =
+      '<h3>#' + spec.circuitId + ' · ' + spec.label + '</h3>' +
+      '<div class="meta">燃烧 <b>' + spec.nand + ' NAND · ' + spec.latch + ' LATCH</b> · 预估 gas <b>' +
+      Number(item.estimatedGas).toLocaleString() + '</b></div>' +
+      '<div class="meta status" id="txstatus-' + index + '">' + (index === 0 ? '待签名' : '等待前一笔完成') + '</div>' +
+      '<button class="primary" id="txsign-' + index + '"' + (index === 0 ? '' : ' disabled') + '>签署这一笔</button>';
+    list.appendChild(box);
+    $("txsign-" + index).addEventListener("click", () => signOne(index));
+  });
+  $("txList").style.display = "block";
+}
+
+async function signOne(index) {
+  const status = $("txstatus-" + index);
+  try {
+    if (!account) throw new Error("请先连接创建者钱包");
+    if (!$("confirmBurn").checked) throw new Error("请先勾选销毁确认");
+    const code = ($("confirmCode").value || "").trim().toUpperCase();
+    if (code !== "332F") throw new Error("目标合约确认码不正确：请核对页面显示的 332F 后重新输入");
+    const p = provider();
+    if (!p) throw new Error("钱包 Provider 已断开");
+    await ensureBsc(p);
+    const nextId = await liveNextId(p);
+    const required = BigInt(EXPECTED.baseNextId) + BigInt(index);
+    if (nextId !== required) {
+      throw new Error("链上 nextId=" + nextId + "，本笔要求 " + required + "。请停止并重新生成清单。");
+    }
+    const item = batch[index];
+    $("txsign-" + index).disabled = true;
+    status.textContent = "等待你在钱包弹窗中核对并确认…";
+    const hash = await p.request({ method: "eth_sendTransaction", params: [item.transaction] });
+    status.className = "meta status ok";
+    status.innerHTML = '已广播 · <a target="_blank" href="https://bscscan.com/tx/' + hash + '">BscScan ↗</a>';
+    $("tx-" + index).classList.add("done");
+    if (index + 1 < batch.length) {
+      const nextBtn = $("txsign-" + (index + 1));
+      nextBtn.disabled = false;
+      $("txstatus-" + (index + 1)).textContent = "待签名";
+    } else {
+      $("status").className = "status ok";
+      $("status").textContent = "2 笔全部完成 ✅ 通知 NANDPU 执行链上验证。";
+    }
+  } catch (e) {
+    $("txsign-" + index).disabled = false;
+    status.textContent = "已停止 · " + e.message;
+  }
+}
+
 (async function boot() {
   try {
     const res = await fetch("manifest.json", { cache: "no-store" });
     if (!res.ok) throw new Error("清单加载失败");
     const data = await res.json();
-    const item = data.transactions && data.transactions[0];
     if (data.chainId !== 56 || data.mode !== EXPECTED.mode
-        || data.currentNextId !== EXPECTED.currentNextId
-        || data.transactions.length !== 1
-        || item.expectedCircuitId !== EXPECTED.expectedCircuitId
-        || item.circuit !== EXPECTED.circuit
-        || item.transistorBurn.NAND !== EXPECTED.nandBurn
-        || item.transistorBurn.LATCH !== EXPECTED.latchBurn
-        || item.transaction.to.toLowerCase() !== EXPECTED.to.toLowerCase()
-        || item.transaction.chainId !== EXPECTED.chainId
-        || item.transaction.value !== "0x0"
-        || !item.transaction.data.startsWith("0x7bd3ac1d")) {
-      throw new Error("Circuit #19 交易清单校验失败（或交易方法不是 tapeout），本页已停止。");
+        || data.baseNextId !== EXPECTED.baseNextId
+        || data.transactions.length !== EXPECTED.order.length) {
+      throw new Error("批次清单校验失败，本页已停止。");
     }
-    manifest = item.transaction;
-    $("notice").textContent = "清单校验通过：Circuit #19 · 1,337 NAND · 0 BNB。请用创建者钱包连接。";
+    data.transactions.forEach((item, index) => {
+      const spec = EXPECTED.order[index];
+      if (item.expectedCircuitId !== spec.circuitId
+          || item.circuit !== spec.circuit
+          || item.transistorBurn.NAND !== spec.nand
+          || item.transistorBurn.LATCH !== spec.latch
+          || item.transaction.to.toLowerCase() !== EXPECTED.to.toLowerCase()
+          || item.transaction.chainId !== EXPECTED.chainId
+          || item.transaction.value !== "0x0"
+          || !item.transaction.data.startsWith("0x7bd3ac1d")) {
+        throw new Error("第 " + (index + 1) + " 笔交易清单校验失败（或交易方法不是 tapeout），本页已停止。");
+      }
+    });
+    batch = data.transactions;
+    $("notice").textContent = "清单校验通过：2 笔 · 4,464 NAND + 4 LATCH · 每笔 0 BNB。请用创建者钱包连接。";
     $("notice").classList.add("ok");
     $("facts").style.display = "block";
     $("connect").style.display = "block";
-    $("gas").textContent = Number(item.estimatedGas).toLocaleString();
+    $("actions").style.display = "block";
+    renderBatch();
   } catch (e) {
     $("notice").textContent = "已停止：" + e.message;
   }
@@ -156,53 +227,10 @@ $("connect").addEventListener("click", async () => {
     }
     account = selected;
     $("connect").textContent = short(selected) + " · 已连接";
-    $("actions").style.display = "block";
-    $("notice").textContent = "创建者钱包已连接。页面不会自动发送；核对后勾选确认并签名。";
+    $("notice").textContent = "创建者钱包已连接。逐笔签名：每笔弹窗前页面会实时核对链上 nextId。";
     $("notice").classList.add("ok");
   } catch (e) {
     $("notice").textContent = "连接失败：" + e.message;
-  }
-});
-
-async function liveNextId(p) {
-  const result = await p.request({
-    method: "eth_call",
-    params: [{ to: EXPECTED.to, data: NEXT_ID_SELECTOR }, "latest"],
-  });
-  return BigInt(result);
-}
-
-$("simulate").addEventListener("click", async () => {
-  try {
-    const p = provider();
-    if (!p) throw new Error("请在 Binance Wallet 中打开本页");
-    await ensureBsc(p);
-    const gas = await p.request({ method: "eth_estimateGas", params: [manifest] });
-    $("status").textContent = "模拟通过 · gas " + BigInt(gas).toString();
-  } catch (e) {
-    $("status").textContent = "模拟失败 · " + e.message;
-  }
-});
-
-$("sign").addEventListener("click", async () => {
-  try {
-    if (!account) throw new Error("请先连接创建者钱包");
-    if (!$("confirmBurn").checked) throw new Error("请先勾选销毁确认");
-    const code = ($("confirmCode").value || "").trim().toUpperCase();
-    if (code !== "332F") throw new Error("目标合约确认码不正确：请核对页面显示的 332F 后重新输入");
-    const p = provider();
-    if (!p) throw new Error("钱包 Provider 已断开");
-    await ensureBsc(p);
-    const nextId = await liveNextId(p);
-    if (nextId !== 18n) throw new Error("链上 nextId=" + nextId + "，本交易要求 18。请停止并重新生成清单。");
-    $("status").textContent = "正在估计 gas…";
-    await p.request({ method: "eth_estimateGas", params: [manifest] });
-    $("status").textContent = "等待你在钱包弹窗中核对并确认…";
-    const hash = await p.request({ method: "eth_sendTransaction", params: [manifest] });
-    $("status").className = "status ok";
-    $("status").innerHTML = "已广播 · <a target=\"_blank\" href=\"https://bscscan.com/tx/" + hash + "\">在 BscScan 查看 ↗</a>（" + hash + "）";
-  } catch (e) {
-    $("status").textContent = "已停止 · " + e.message;
   }
 });
 </script>
