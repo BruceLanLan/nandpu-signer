@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>NANDPU · Circuits #20-#21 批量签字页</title>
+<title>NANDPU · Circuits #20-#22 批量签字页</title>
 <style>
   :root { color-scheme: dark; }
   body { margin:0; background:#0b0e13; color:#e6edf3; font-family:-apple-system,"PingFang SC",sans-serif; }
@@ -38,14 +38,14 @@
 <body>
 <main>
   <div class="eyebrow">TAPEOUT · BNB SMART CHAIN</div>
-  <h1>NANDPU Circuits #20-#21<br/>批量签字页（D-022 队列窗口 4-5/5，2 笔独立交易）</h1>
-  <p class="lede">D-022 PoD 展平双胞胎队列最后两颗：#20 xor-mlp-2x2x1-direct（#9 的无 REF 展平版，2026-08-20 优化过，1,515 门）→ #21 mini-brain-14-direct（#15 的无 REF 展平版，旗舰）。每笔都是独立交易，钱包逐笔弹窗确认，每笔签名前都会重新核对链上 nextId；可随时停止，已签的永久生效，未签的关页后作废。页面不读、不存私钥，也不会自动发送。</p>
+  <h1>NANDPU Circuits #20-#22<br/>批量签字页（3 笔独立交易）</h1>
+  <p class="lede">D-022 PoD 展平双胞胎队列最后两颗，加一颗 Chapter 4 Cortex 候选：#20 xor-mlp-2x2x1-direct（#9 的无 REF 展平版，2026-08-20 优化过，1,515 门）→ #21 mini-brain-14-direct（#15 的无 REF 展平版，旗舰）→ #22 mac-8x8-w16（8×8 MAC，Chapter 4 既有路线图项目，docs/mac-8x8-w16-design.md）。每笔都是独立交易，钱包逐笔弹窗确认，每笔签名前都会重新核对链上 nextId；可随时停止，已签的永久生效，未签的关页后作废。页面不读、不存私钥，也不会自动发送。</p>
 
   <div class="notice" id="notice">正在校验交易清单…</div>
 
   <div class="card" id="facts" style="display:none">
-    <div class="row"><span>批次</span><b>2 笔 · #20 → #21</b></div>
-    <div class="row"><span>显式燃烧合计</span><b>4,464 NAND · 4 LATCH</b></div>
+    <div class="row"><span>批次</span><b>3 笔 · #20 → #22</b></div>
+    <div class="row"><span>显式燃烧合计</span><b>5,526 NAND · 4 LATCH</b></div>
     <div class="row"><span>目标合约</span><b><code id="to">0x86332F5BF2448b726AC4e4B427d16101bE3a28aA</code></b></div>
     <div class="row"><span>每笔发送金额</span><b>0 BNB</b></div>
     <div class="row"><span>创建者钱包</span><b><code id="from">0x71c258DBBDf364a2204f010dc981493a33a9A720</code></b></div>
@@ -58,7 +58,7 @@
   <div class="card" id="actions" style="display:none">
     <label class="confirm">
       <input type="checkbox" id="confirmBurn" />
-      <span>我确认将永久销毁本批共 4,464 个 NAND 与 4 个 LATCH 晶体管（不可逆），且每笔交易发送金额为 0 BNB。</span>
+      <span>我确认将永久销毁本批共 5,526 个 NAND 与 4 个 LATCH 晶体管（不可逆），且每笔交易发送金额为 0 BNB。</span>
     </label>
     <div class="notice warn" id="compareBox" style="display:block">
       <b>钱包弹窗逐项对照（防钓鱼）</b>：每一笔弹窗都核对——链 <b>BNB Smart Chain (0x38)</b>、目标合约前 4 位 <b>8633</b>、金额 <b>0 BNB</b>。任何一项不一致，点「拒绝」。
@@ -85,6 +85,7 @@ const EXPECTED = {
   order: [
     { circuitId: "20", circuit: "xor-mlp-2x2x1-direct", nand: 1515, latch: 0, label: "XOR MLP (2-2-1) Direct — flat twin of #9" },
     { circuitId: "21", circuit: "mini-brain-14-direct", nand: 2949, latch: 4, label: "Mini-Brain Direct — flat twin of #15" },
+    { circuitId: "22", circuit: "mac-8x8-w16", nand: 1062, latch: 0, label: "MAC-8x8 W16 — Chapter 4 Cortex candidate" },
   ],
   to: "0x86332F5BF2448b726AC4e4B427d16101bE3a28aA",
   creator: "0x71c258DBBDf364a2204f010dc981493a33a9A720",
@@ -172,7 +173,7 @@ async function signOne(index) {
       $("txstatus-" + (index + 1)).textContent = "待签名";
     } else {
       $("status").className = "status ok";
-      $("status").textContent = "2 笔全部完成 ✅ 通知 NANDPU 执行链上验证。";
+      $("status").textContent = "3 笔全部完成 ✅ 通知 NANDPU 执行链上验证。";
     }
   } catch (e) {
     $("txsign-" + index).disabled = false;
@@ -204,7 +205,7 @@ async function signOne(index) {
       }
     });
     batch = data.transactions;
-    $("notice").textContent = "清单校验通过：2 笔 · 4,464 NAND + 4 LATCH · 每笔 0 BNB。请用创建者钱包连接。";
+    $("notice").textContent = "清单校验通过：3 笔 · 5,526 NAND + 4 LATCH · 每笔 0 BNB。请用创建者钱包连接。";
     $("notice").classList.add("ok");
     $("facts").style.display = "block";
     $("connect").style.display = "block";
