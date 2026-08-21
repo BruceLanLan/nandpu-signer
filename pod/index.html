@@ -91,10 +91,12 @@
     <input id="claimCircuits" placeholder="0xb1024b89886B9a34Aa4ff5F31C411D708b20a14C" />
     <label>电路 ID</label>
     <input id="claimId" placeholder="1188" />
-    <label>链上题号（taskId，来自 TaskAdded 事件，不是官网 tasks.json 的 srcId——两套编号不一样，见交接文档 §2.4）</label>
-    <input id="claimTaskId" placeholder="60" />
-    <button class="secondary" id="loadTaskBtn">① 读取电路 + 题目信息（只读）</button>
-    <div class="status" id="taskStatus"></div>
+    <button class="secondary" id="scanTasksBtn">① 扫描题库，找出接口对得上的题目（只读）</button>
+    <div class="status" id="scanStatus"></div>
+    <div id="taskPicker" style="display:none">
+      <label>选一道题（只列出引脚跟这颗电路匹配的）</label>
+      <select id="claimTaskSelect"></select>
+    </div>
     <div class="card" id="taskInfo" style="display:none"></div>
 
     <button class="secondary" id="previewBtn" style="display:none">② previewScore（只读，看会不会拿到溢价）</button>
@@ -320,73 +322,103 @@ $("lookupBtn").addEventListener("click", async () => {
 
 // ---- 认领新题目 flow state ----
 let claimState = {};
+let allTasksCache = null; // cached TaskAdded events, scanned once per page load
 
-$("loadTaskBtn").addEventListener("click", async () => {
-  const status = $("taskStatus");
-  const info = $("taskInfo");
+// Scans MINING_FROM_BLOCK..latest once (chunked, bounded -- see the
+// comment on MINING_FROM_BLOCK above) and caches every TaskAdded event.
+// Reused across circuits so switching which circuit you're claiming for
+// doesn't re-scan the chain every time.
+async function getAllTasks() {
+  if (allTasksCache) return allTasksCache;
+  return withReadRetry(async (p) => {
+    const mining = new ethers.Contract(ADDR.mining, MINING_ABI, p);
+    const filter = mining.filters.TaskAdded();
+    const latestBlock = await p.getBlockNumber();
+    const CHUNK = 9500;
+    let events = [];
+    for (let from = MINING_FROM_BLOCK; from <= latestBlock; from += CHUNK) {
+      const to = Math.min(from + CHUNK - 1, latestBlock);
+      events = events.concat(await mining.queryFilter(filter, from, to));
+    }
+    allTasksCache = events.map((ev) => ev.args);
+    return allTasksCache;
+  });
+}
+
+$("scanTasksBtn").addEventListener("click", async () => {
+  const status = $("scanStatus");
+  const picker = $("taskPicker");
+  const select = $("claimTaskSelect");
   try {
-    status.textContent = "读取中…";
+    status.textContent = "扫描题库中（第一次会慢一点，后面选别的电路会用缓存）…";
     const circuits = $("claimCircuits").value.trim();
     const idRaw = $("claimId").value.trim();
-    const taskIdRaw = $("claimTaskId").value.trim();
     if (!idRaw) throw new Error("电路 ID 是空的");
-    if (!taskIdRaw) throw new Error("题号是空的");
-    const id = BigInt(idRaw);
-    const taskId = Number(taskIdRaw);
     if (!ethers.isAddress(circuits)) throw new Error("处理器地址不对");
+    const id = BigInt(idRaw);
 
-    const result = await withReadRetry(async (p) => {
+    const [circuitInfo, tasks] = await withReadRetry(async (p) => {
       const circuitsC = new ethers.Contract(circuits, CIRCUITS_ABI, p);
-      const mining = new ethers.Contract(ADDR.mining, MINING_ABI, p);
-      const [nIn, nOut, nState, gateCount] = await circuitsC.circuitInfo(id);
-      // Pull the task's real definition from the TaskAdded event -- this
-      // is on-chain ground truth (vectorsRoot lives here), not any JSON
-      // file, so it works even while the site's own JSON is flaky.
-      //
-      // MINING_FROM_BLOCK to "latest" in chunks, NOT fromBlock=0: an
-      // unbounded eth_getLogs over BSC's whole history is enormous and
-      // is exactly what drove public RPC endpoints into repeated 429s
-      // during testing (caught before handoff, not a hypothetical).
-      // Free-tier public RPCs also cap a single eth_getLogs range at
-      // 10,000 blocks (hit this exact limit earlier building other
-      // NANDPU tooling this session).
-      const filter = mining.filters.TaskAdded(taskId);
-      const latestBlock = await p.getBlockNumber();
-      const CHUNK = 9500;
-      let events = [];
-      for (let from = MINING_FROM_BLOCK; from <= latestBlock; from += CHUNK) {
-        const to = Math.min(from + CHUNK - 1, latestBlock);
-        const chunkEvents = await mining.queryFilter(filter, from, to);
-        events = events.concat(chunkEvents);
-      }
-      if (events.length === 0) throw new Error("链上找不到题号 " + taskId + " 的 TaskAdded 事件（扫了区块 " + MINING_FROM_BLOCK + " 到 " + latestBlock + "）——确认这是链上题号，不是官网 tasks.json 的 srcId（两套不一样，见交接文档 §2.4）");
-      const ev = events[events.length - 1];
-      const task = ev.args;
-      const sampleCount = await mining.sampleCountFor(gateCount, task.cycles);
-      return { nIn, nOut, nState, gateCount, task, sampleCount, p };
+      const info = await circuitsC.circuitInfo(id);
+      return [info, await getAllTasks()];
     });
+    const [nIn, nOut, nState, gateCount] = circuitInfo;
 
-    const pinOk = Number(result.nIn) === Number(result.task.nIn) && Number(result.nOut) === Number(result.task.nOut);
+    const matching = tasks.filter((t) => Number(t.nIn) === Number(nIn) && Number(t.nOut) === Number(nOut));
+    claimState = { circuits, id, nIn, nOut, nState, gateCount };
 
-    claimState = { circuits, id, taskId, ...result };
+    if (matching.length === 0) {
+      status.textContent = "扫了 " + tasks.length + " 道题，没有一道引脚跟这颗电路（" + nIn + "→" + nOut + "）对上。";
+      status.className = "status err";
+      picker.style.display = "none";
+      return;
+    }
 
-    info.style.display = "block";
-    info.innerHTML =
-      '<div class="row"><span>电路接口</span><b>' + result.nIn + "→" + result.nOut + " / " + result.gateCount + " 门</b></div>" +
-      '<div class="row"><span>题目</span><b>#' + taskId + " " + result.task.name + "</b></div>" +
-      '<div class="row"><span>题目接口</span><b>' + result.task.nIn + "→" + result.task.nOut + (pinOk ? '<span class="pill ok">匹配</span>' : '<span class="pill err">不匹配！pin mismatch，会 revert</span>') + "</b></div>" +
-      '<div class="row"><span>向量总数</span><b>' + result.task.vectorCount + "</b></div>" +
-      '<div class="row"><span>抽检条数</span><b>' + result.sampleCount + "</b></div>" +
-      '<div class="row"><span>vectorsRoot（链上）</span><b><code>' + result.task.vectorsRoot + "</code></b></div>";
-
-    status.textContent = pinOk ? "读取完成，接口匹配。" : "读取完成，但接口不匹配——继续下去会 revert，不建议往下走。";
-    status.className = pinOk ? "status ok" : "status err";
-    $("previewBtn").style.display = "block";
+    select.innerHTML = matching.map((t) =>
+      '<option value="' + t.taskId + '">#' + t.taskId + " " + t.name + "（参考 " + t.refCost + " C_ref）</option>"
+    ).join("");
+    select.dataset.tasks = JSON.stringify(matching.map((t) => ({
+      taskId: Number(t.taskId), name: t.name, cycles: Number(t.cycles),
+      nIn: Number(t.nIn), nOut: Number(t.nOut), vectorCount: Number(t.vectorCount),
+      vectorsRoot: t.vectorsRoot,
+    })));
+    picker.style.display = "block";
+    status.textContent = "电路接口 " + nIn + "→" + nOut + " / " + gateCount + " 门。题库共 " + tasks.length + " 道，" + matching.length + " 道引脚对上，下面选一道。";
+    status.className = "status ok";
+    selectTask();
   } catch (e) {
     status.textContent = "失败：" + e.message;
     status.className = "status err";
   }
 });
+
+function selectTask() {
+  const select = $("claimTaskSelect");
+  const info = $("taskInfo");
+  const tasks = JSON.parse(select.dataset.tasks || "[]");
+  const task = tasks.find((t) => String(t.taskId) === select.value);
+  if (!task) return;
+  withReadRetry(async (p) => {
+    const mining = new ethers.Contract(ADDR.mining, MINING_ABI, p);
+    return mining.sampleCountFor(claimState.gateCount, task.cycles);
+  }).then((sampleCount) => {
+    claimState.taskId = task.taskId;
+    claimState.task = task;
+    claimState.sampleCount = sampleCount;
+    info.style.display = "block";
+    info.innerHTML =
+      '<div class="row"><span>电路接口</span><b>' + claimState.nIn + "→" + claimState.nOut + " / " + claimState.gateCount + " 门</b></div>" +
+      '<div class="row"><span>题目</span><b>#' + task.taskId + " " + task.name + "</b></div>" +
+      '<div class="row"><span>向量总数</span><b>' + task.vectorCount + "</b></div>" +
+      '<div class="row"><span>抽检条数</span><b>' + sampleCount + "</b></div>" +
+      '<div class="row"><span>vectorsRoot（链上）</span><b><code>' + task.vectorsRoot + "</code></b></div>";
+    $("previewBtn").style.display = "block";
+  }).catch((e) => {
+    $("scanStatus").textContent = "读 sampleCount 失败：" + e.message;
+    $("scanStatus").className = "status err";
+  });
+}
+$("claimTaskSelect").addEventListener("change", selectTask);
 
 $("previewBtn").addEventListener("click", async () => {
   const status = $("previewStatus");
@@ -607,7 +639,6 @@ $("lookupCircuits").value = KNOWN[0].circuits;
 $("lookupId").value = KNOWN[0].id;
 $("claimCircuits").value = KNOWN[0].circuits;
 $("claimId").value = KNOWN[0].id;
-$("claimTaskId").value = KNOWN[0].taskId;
 
 refreshKnownMiners().catch(() => {});
 </script>
