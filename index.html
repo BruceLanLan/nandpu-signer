@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>NANDPU · Circuits #32-#40 批量签字页</title>
+<title>NANDPU · Circuits #36-#40 批量签字页</title>
 <style>
   :root { color-scheme: dark; }
   body { margin:0; background:#0b0e13; color:#e6edf3; font-family:-apple-system,"PingFang SC",sans-serif; }
@@ -41,14 +41,14 @@
 <body>
 <main>
   <div class="eyebrow">TAPEOUT · BNB SMART CHAIN</div>
-  <h1>NANDPU Circuits #32-#40<br/>批量签字页（9 笔独立交易）</h1>
-  <p class="lede">D-035 Wallace 树平替批次：8 颗历史高深度电路（多为已上链电路的平替，旧电路不动，D-002）用 3:2/2:2 压缩器并行归约代替行波进位/顺序权重扫描，深度普遍降低 30-83%，成本 C 最高降低 99.9%。#32/#33（4×4/8×8 无符号乘法器）额外对应官方 278 题库第 61/62 题——#61 我们目前仍比官方参考贵，#62（8×8，假设无符号）比官方参考便宜约 2 倍，具体语义待跟创始人核对后再判断能否认领。其余 7 颗题库无对应题，纯粹是 NANDPU 自己的 AI 计算栈原语（D-033），跟 PoD 是否计分无关，照样发布。每笔都是独立交易，钱包逐笔弹窗确认；可随时停止，已签的永久生效，未签的关页后作废。页面不读、不存私钥，也不会自动发送。</p>
+  <h1>NANDPU Circuits #36-#40<br/>批量签字页（5 笔独立交易，接续 #32-#35）</h1>
+  <p class="lede">D-035 Wallace 树平替批次的后半段：前一个窗口的 #32-#35（无符号/有符号 4×4/8×8 乘法器）已经上链并完成链上 eval() 差分校验（20 组向量全部一致）。这个页面接着签剩下 5 笔：#36 无符号 8×8 MAC、#37 有符号 8×8 MAC、#38 Dot4-U4、#39 Dot4-Q4S、#40 Dot2-Q4S——都是已上链电路的深度优化平替（旧电路不动，D-002），题库里没有对应题，纯粹是 NANDPU 自己的 AI 计算栈原语（D-033）。每笔都是独立交易，钱包逐笔弹窗确认；可随时停止，已签的永久生效，未签的关页后作废。页面不读、不存私钥，也不会自动发送。</p>
 
   <div class="notice" id="notice">正在校验交易清单…</div>
 
   <div class="card" id="facts" style="display:none">
-    <div class="row"><span>批次</span><b>9 笔 · #32 → #40</b></div>
-    <div class="row"><span>显式燃烧合计</span><b>6,240 NAND · 0 LATCH</b></div>
+    <div class="row"><span>批次</span><b>5 笔 · #36 → #40（接续已完成的 #32-#35）</b></div>
+    <div class="row"><span>显式燃烧合计</span><b>4,359 NAND · 0 LATCH</b></div>
     <div class="row"><span>目标合约</span><b><code id="to">0x86332F5BF2448b726AC4e4B427d16101bE3a28aA</code></b></div>
     <div class="row"><span>每笔发送金额</span><b>0 BNB</b></div>
     <div class="row"><span>创建者钱包</span><b><code id="from">0x71c258DBBDf364a2204f010dc981493a33a9A720</code></b></div>
@@ -62,7 +62,7 @@
   <div class="card" id="actions" style="display:none">
     <label class="confirm">
       <input type="checkbox" id="confirmBurn" />
-      <span>我确认将永久销毁本批共 6,240 个 NAND 晶体管（不可逆），且每笔交易发送金额为 0 BNB。</span>
+      <span>我确认将永久销毁本批共 4,359 个 NAND 晶体管（不可逆），且每笔交易发送金额为 0 BNB。</span>
     </label>
     <div class="notice warn" id="compareBox" style="display:block">
       <b>钱包弹窗逐项对照（防钓鱼）</b>：每一笔弹窗都核对——链 <b>BNB Smart Chain (0x38)</b>、目标合约前 4 位 <b>8633</b>、金额 <b>0 BNB</b>。任何一项不一致，点「拒绝」。
@@ -85,12 +85,8 @@
 const EXPECTED = {
   chainId: "0x38",
   mode: "UNSIGNED_BATCH_RELEASE",
-  baseNextId: "31",
+  baseNextId: "35",
   order: [
-    { circuitId: "32", circuit: "multiplier-fast-4x4", nand: 186, latch: 0, label: "4×4 无符号乘法器（Wallace 树优化）" },
-    { circuitId: "33", circuit: "multiplier-fast-8x8", nand: 753, latch: 0, label: "8×8 无符号乘法器（Wallace 树优化）" },
-    { circuitId: "34", circuit: "mult-4x4-signed-fast", nand: 184, latch: 0, label: "4×4 有符号乘法器（Baugh-Wooley + Wallace 树）" },
-    { circuitId: "35", circuit: "mult-8x8-signed-fast", nand: 758, latch: 0, label: "8×8 有符号乘法器（Baugh-Wooley + Wallace 树）" },
     { circuitId: "36", circuit: "mac-8x8-w16-fast", nand: 899, latch: 0, label: "8×8 无符号 MAC（Wallace 树优化）" },
     { circuitId: "37", circuit: "mac-8x8-w16-signed-fast", nand: 913, latch: 0, label: "8×8 有符号 MAC（Wallace 树优化）" },
     { circuitId: "38", circuit: "dot4-u4-fast", nand: 1060, latch: 0, label: "Dot4-U4（4 路无符号点积，Wallace 树优化）" },
@@ -183,7 +179,7 @@ async function signOne(index) {
       $("txstatus-" + (index + 1)).textContent = "待签名";
     } else {
       $("status").className = "status ok";
-      $("status").textContent = "9 笔全部完成 ✅ 通知 NANDPU 执行链上验证。";
+      $("status").textContent = "5 笔全部完成 ✅ 通知 NANDPU 执行链上验证。";
     }
   } catch (e) {
     $("txsign-" + index).disabled = false;
@@ -223,7 +219,7 @@ async function signOne(index) {
       }
     });
     batch = data.transactions;
-    $("notice").textContent = "清单校验通过：9 笔 · 6,240 NAND · 每笔 0 BNB。请用创建者钱包连接。";
+    $("notice").textContent = "清单校验通过：5 笔 · 4,359 NAND · 每笔 0 BNB。请用创建者钱包连接。";
     $("notice").classList.add("ok");
     $("facts").style.display = "block";
     $("connect").style.display = "block";
