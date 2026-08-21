@@ -330,19 +330,29 @@ let allTasksCache = null; // cached TaskAdded events, scanned once per page load
 // doesn't re-scan the chain every time.
 async function getAllTasks() {
   if (allTasksCache) return allTasksCache;
-  return withReadRetry(async (p) => {
-    const mining = new ethers.Contract(ADDR.mining, MINING_ABI, p);
-    const filter = mining.filters.TaskAdded();
-    const latestBlock = await p.getBlockNumber();
-    const CHUNK = 9500;
-    let events = [];
-    for (let from = MINING_FROM_BLOCK; from <= latestBlock; from += CHUNK) {
-      const to = Math.min(from + CHUNK - 1, latestBlock);
-      events = events.concat(await mining.queryFilter(filter, from, to));
-    }
-    allTasksCache = events.map((ev) => ev.args);
-    return allTasksCache;
-  });
+  // Retry PER CHUNK, not the whole multi-chunk scan as one unit -- the
+  // first version wrapped the entire loop in one withReadRetry, so a
+  // single slow/timed-out chunk on any one endpoint threw away every
+  // chunk already fetched and restarted the whole scan from scratch on
+  // the next endpoint (confirmed live: bsc.drpc.org's free-tier
+  // eth_getLogs timeout killed the whole scan instead of just that
+  // chunk). Each chunk now gets its own fallback across READ_RPCS.
+  const p0 = await getReadProvider();
+  const mining0 = new ethers.Contract(ADDR.mining, MINING_ABI, p0);
+  const filter = mining0.filters.TaskAdded();
+  const latestBlock = await p0.getBlockNumber();
+  const CHUNK = 9500;
+  let events = [];
+  for (let from = MINING_FROM_BLOCK; from <= latestBlock; from += CHUNK) {
+    const to = Math.min(from + CHUNK - 1, latestBlock);
+    const chunkEvents = await withReadRetry(async (p) => {
+      const mining = new ethers.Contract(ADDR.mining, MINING_ABI, p);
+      return mining.queryFilter(filter, from, to);
+    });
+    events = events.concat(chunkEvents);
+  }
+  allTasksCache = events.map((ev) => ev.args);
+  return allTasksCache;
 }
 
 $("scanTasksBtn").addEventListener("click", async () => {
