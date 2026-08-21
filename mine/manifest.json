@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-08-21T15:24:28.872Z",
+  "generatedAt": "2026-08-21T15:29:22.553Z",
   "mode": "UNSIGNED_BATCH_RELEASE",
   "warning": "TapeOut processor mining pack. Not NANDPU. No signature, does not broadcast.",
   "chainId": 56,
-  "blockNumber": 117255608,
+  "blockNumber": 117256253,
   "processor": "0xb1024b89886b9a34aa4ff5f31c411d708b20a14c",
   "transistors": "0xCC42ba5De07f01B472a5b14cF45aBcCA79Eb8087",
-  "baseNextId": "1117",
+  "baseNextId": "1118",
   "balances": {
     "NAND": "500",
     "LATCH": "0"
@@ -15,11 +15,10 @@
     "NAND": "485",
     "LATCH": "0"
   },
-  "rpcUrl": "https://tapeout.net/rpc",
   "transactions": [
     {
       "order": 1,
-      "expectedCircuitId": "1118",
+      "expectedCircuitId": "1119",
       "circuit": "task-61-mul4x4",
       "name": "TapeOut task #61 4×4 乘法器",
       "taskId": 61,
@@ -43,7 +42,7 @@
     },
     {
       "order": 2,
-      "expectedCircuitId": "1119",
+      "expectedCircuitId": "1120",
       "circuit": "task-31-gt4",
       "name": "TapeOut task #31 4 位大于判定",
       "taskId": 31,
@@ -67,7 +66,7 @@
     },
     {
       "order": 3,
-      "expectedCircuitId": "1120",
+      "expectedCircuitId": "1121",
       "circuit": "task-149-gt3",
       "name": "TapeOut task #149 3 位大于判定",
       "taskId": 149,
@@ -91,7 +90,7 @@
     },
     {
       "order": 4,
-      "expectedCircuitId": "1121",
+      "expectedCircuitId": "1122",
       "circuit": "task-147-gt2",
       "name": "TapeOut task #147 2 位大于判定",
       "taskId": 147,
@@ -115,7 +114,7 @@
     },
     {
       "order": 5,
-      "expectedCircuitId": "1122",
+      "expectedCircuitId": "1123",
       "circuit": "task-222-allones4",
       "name": "TapeOut task #222 4 位全 1 检测",
       "taskId": 222,
