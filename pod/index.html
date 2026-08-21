@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<title>NANDPU · PoD 挖矿助手</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.17.0/dist/ethers.umd.min.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; background:#0b0e13; color:#e6edf3; font-family:-apple-system,"PingFang SC",sans-serif; }
+  main { max-width:720px; margin:0 auto; padding:24px 16px 80px; }
+  .eyebrow { color:#8b949e; font-size:12px; letter-spacing:.15em; text-transform:uppercase; }
+  h1 { font-size:26px; margin:8px 0 4px; }
+  h2 { font-size:17px; margin:0 0 10px; }
+  .lede { color:#a5b1bd; line-height:1.6; }
+  .card { background:#151a22; border:1px solid #232b36; border-radius:12px; padding:16px; margin:16px 0; }
+  .row { display:flex; justify-content:space-between; gap:8px; padding:5px 0; border-bottom:1px dashed #232b36; font-size:14px; }
+  .row:last-child { border-bottom:none; }
+  .row span { color:#8b949e; }
+  .row b { text-align:right; word-break:break-all; }
+  code { color:#7ee787; font-size:12px; }
+  input, select { width:100%; padding:10px; border-radius:8px; border:1px solid #30363d; background:#0b0e13; color:#e6edf3; font-size:14px; margin:4px 0 10px; box-sizing:border-box; }
+  label { font-size:13px; color:#8b949e; }
+  button { width:100%; padding:12px; border:none; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; margin-top:6px; }
+  .primary { background:#2ea043; color:#fff; }
+  .secondary { background:#21262d; color:#e6edf3; }
+  .danger { background:#f85149; color:#fff; }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  .notice { background:#1a2332; border:1px solid #30363d; border-radius:10px; padding:12px; margin:12px 0; font-size:13px; line-height:1.6; }
+  .notice.ok { border-color:#2ea043; color:#7ee787; }
+  .notice.err { border-color:#f85149; color:#ffb4af; }
+  .notice.warn { border-color:#f0b429; color:#f0b429; }
+  .status { margin-top:8px; font-size:13px; color:#8b949e; white-space:pre-wrap; }
+  .status.ok { color:#7ee787; }
+  .status.err { color:#f85149; }
+  a { color:#58a6ff; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; margin-left:6px; background:#21262d; color:#8b949e; }
+  .pill.ok { background:#123420; color:#7ee787; }
+  .pill.err { background:#3a1414; color:#ff9d94; }
+  .miner-card { border:1px solid #232b36; border-radius:10px; padding:12px; margin:8px 0; background:#10151c; font-size:13px; }
+  hr.sep { border:none; border-top:1px solid #232b36; margin:20px 0; }
+  .step { font-size:12px; color:#6e7681; margin:2px 0; }
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">TAPEOUT · PoD 挖矿 · BNB SMART CHAIN</div>
+  <h1>PoD 挖矿助手（辅助页，不是官方页面）</h1>
+  <p class="lede">
+    官网 <a href="https://tapeout.net/pod/" target="_blank">tapeout.net/pod/</a> 挖矿刚上线，
+    同源 <code>/rpc</code> 代理被压垮，页面反复 502/429 卡死。这页做同一件事，
+    但读链走公共多节点轮询（不依赖官网那一个代理），写交易（<code>arm</code>/<code>start</code>/<code>claim</code>）
+    始终只由你在钱包里逐笔签——跟 NANDPU 签字页同一套纪律：本页不存、不问私钥，
+    不会自动发送任何交易，每一步都要你按按钮确认。
+    题目自己选：下面「认领新题目」里填处理器地址、电路 ID、题号即可，不限定这几颗电路。
+  </p>
+
+  <div class="notice warn">
+    <b>⚠️ 已知限制，如实说明：</b>「认领新题目」的最后一步 <code>start()</code> 需要官方
+    256 条向量的 Merkle 证明；官方向量包（<code>pod-taskbank.json</code>）现在本身也在
+    间歇性失败（同样是负载问题）。本页会在真正发送 <code>start()</code> 之前，用抓到的
+    向量数据本地重算 Merkle 根，跟链上 <code>vectorsRoot</code> 核对——**核对不上就不会让你
+    签**，不会拿一笔会失败/浪费 gas 的交易给你签。核对不上通常意味着现在还抓不到这道题的
+    官方向量，不是本页的 bug。「查看已有矿机」「领取」不受这个限制，随时能用。
+  </div>
+
+  <div class="card">
+    <h2>连接钱包</h2>
+    <button class="primary" id="connect">连接 Binance Wallet</button>
+    <div class="status" id="connectStatus">未连接</div>
+    <div class="status" id="rpcStatus"></div>
+  </div>
+
+  <div class="card">
+    <h2>① 查看已有矿机</h2>
+    <p class="lede" style="font-size:13px">默认列出交接文档记录过的 5 颗竞赛电路（官方 TapeOut 处理器）。也可以查任意 circuits 地址 + circuitId。</p>
+    <div id="minerList"></div>
+    <hr class="sep" />
+    <label>处理器地址（circuits）</label>
+    <input id="lookupCircuits" placeholder="0xb1024b89886B9a34Aa4ff5F31C411D708b20a14C" />
+    <label>电路 ID</label>
+    <input id="lookupId" placeholder="1188" />
+    <button class="secondary" id="lookupBtn">查这颗电路的矿机状态</button>
+    <div class="status" id="lookupStatus"></div>
+  </div>
+
+  <div class="card">
+    <h2>② 认领新题目（arm → start）</h2>
+    <label>处理器地址（circuits）</label>
+    <input id="claimCircuits" placeholder="0xb1024b89886B9a34Aa4ff5F31C411D708b20a14C" />
+    <label>电路 ID</label>
+    <input id="claimId" placeholder="1188" />
+    <label>链上题号（taskId，来自 TaskAdded 事件，不是官网 tasks.json 的 srcId——两套编号不一样，见交接文档 §2.4）</label>
+    <input id="claimTaskId" placeholder="60" />
+    <button class="secondary" id="loadTaskBtn">① 读取电路 + 题目信息（只读）</button>
+    <div class="status" id="taskStatus"></div>
+    <div class="card" id="taskInfo" style="display:none"></div>
+
+    <button class="secondary" id="previewBtn" style="display:none">② previewScore（只读，看会不会拿到溢价）</button>
+    <div class="status" id="previewStatus"></div>
+
+    <button class="primary" id="armBtn" style="display:none">③ arm（钱包签名，锚定当前区块）</button>
+    <div class="status" id="armStatus"></div>
+
+    <button class="secondary" id="fetchVectorsBtn" style="display:none">④ 抓官方向量 + 本地核对 Merkle 根（只读，不签名）</button>
+    <div class="status" id="vectorStatus"></div>
+
+    <button class="primary" id="startBtn" style="display:none" disabled>⑤ start（钱包签名，正式认领）</button>
+    <div class="status" id="startStatus"></div>
+  </div>
+
+  <div class="card">
+    <h2>③ 领取 $BEM</h2>
+    <label>矿机 key（bytes32，来自上面「查看已有矿机」或 Started 事件）</label>
+    <input id="claimKey" placeholder="0x..." />
+    <button class="secondary" id="claimBtn">claim（钱包签名）</button>
+    <div class="status" id="claimStatus"></div>
+  </div>
+
+  <div class="notice">
+    安全边界：不要向任何人提供助记词或私钥。钱包弹窗里核对——链 <b>BNB Smart Chain (0x38)</b>、
+    目标合约、发送金额（本页所有操作都应该是 <b>0 BNB</b>）。任何一项不对就拒绝。
+    本页不是官方页面，是照着交接文档 <code>docs/handoff-2026-08-21-tapeout-pod.md</code> 和官方
+    JS 里的合约 ABI 做的辅助工具。
+  </div>
+</main>
+<script>
+"use strict";
+
+// ---- Contract addresses (docs/handoff-2026-08-21-tapeout-pod.md, cross-checked
+// against tapeout.net/pod/assets/main-*.js pod-mainnet.json) ----
+const ADDR = {
+  mining: "0x7E2E0DC66a3bD9103E69b766afA62d9f7b697b46",
+  lens: "0xdD20B9537b9f5DB9d2A23E6B11Ad863cF81930d8",
+  token: "0x5ce033B2bFCa3Af30b3e8C8457DeaF776A8b695a",
+};
+const CHAIN_ID_HEX = "0x38";
+
+// ---- ABIs extracted verbatim from tapeout.net/pod/assets/main-*.js (2026-08-21) ----
+const MINING_ABI = [
+  "function arm(address,uint256)",
+  "function start(address,uint256,uint32,uint256,bytes[],bytes[],bytes32[][],bytes32) returns (bytes32)",
+  "function claim(bytes32)",
+  "function claimMany(bytes32[])",
+  "function stop(bytes32)",
+  "function armedAt(bytes32) view returns (uint64)",
+  "function minerKey(address,uint256) pure returns (bytes32)",
+  "function getMiner(bytes32) view returns (tuple(address circuits,uint64 circuitId,uint32 taskId,uint32 gateCount,uint32 stateCount,uint32 depth,uint64 area,uint32 mult,uint64 since,uint8 status,address registrant,uint32 nandBurn,uint32 latchBurn,uint64 bstar,uint64 bonus,bool optimal,uint64 commitBlock,uint64 firstUnusedId,uint64 stopBlock,uint128 verifWeight,uint128 unverWeight,uint256 debt))",
+  "function pending(bytes32) view returns (uint256)",
+  "function sampleCountFor(uint32,uint32) view returns (uint32)",
+  "function cachedDepth(address,uint256) view returns (bool cached,uint32 depth,uint32 live)",
+  "function taskCount() view returns (uint256)",
+  "event TaskAdded(uint32 indexed taskId, string name, uint8 kind, uint32 cycles, uint32 nIn, uint32 nOut, uint32 vectorCount, bytes32 vectorsRoot, address refCircuits, uint256 refCircuitId, uint64 refArea, uint256 refCost)",
+];
+const LENS_ABI = [
+  "function previewScore(address,uint256,uint32) view returns (uint256 verifWeight,uint256 unverWeight,uint256 h,uint64 bstar,uint64 bonus,bool optimal,uint32 samples,string reason)",
+];
+const CIRCUITS_ABI = [
+  "function circuitInfo(uint256) view returns (uint32,uint32,uint32,uint32)",
+  "function eval(uint256,bytes) view returns (bytes)",
+];
+
+// ---- Read RPC: rotate across public endpoints, NEVER tapeout.net/rpc
+// (that same-origin proxy is the thing that's currently overloaded --
+// this is the whole reason this page exists). Writes never go through
+// this; writes always go through the wallet's own provider. ----
+const READ_RPCS = [
+  "https://bsc-dataseed.binance.org",
+  "https://bsc-dataseed1.defibit.io",
+  "https://bsc-rpc.publicnode.com",
+  "https://bsc.drpc.org",
+];
+let readProvider = null;
+async function getReadProvider() {
+  if (readProvider) return readProvider;
+  for (const url of READ_RPCS) {
+    try {
+      const p = new ethers.JsonRpcProvider(url, 56, { staticNetwork: true });
+      await p.getBlockNumber();
+      readProvider = p;
+      $("rpcStatus").textContent = "读链节点：" + url;
+      return p;
+    } catch (e) { /* try next */ }
+  }
+  throw new Error("所有公共 RPC 节点都连不上，稍后重试");
+}
+async function withReadRetry(fn) {
+  let lastErr;
+  for (const url of READ_RPCS) {
+    try {
+      const p = new ethers.JsonRpcProvider(url, 56, { staticNetwork: true });
+      const result = await fn(p);
+      readProvider = p;
+      $("rpcStatus").textContent = "读链节点：" + url;
+      return result;
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr;
+}
+
+const $ = (id) => document.getElementById(id);
+function walletProvider() {
+  const w = window;
+  return (w.ethereum && w.ethereum.request ? w.ethereum : null)
+      || (w.BinanceChain ? w.BinanceChain : null);
+}
+let account = "";
+
+async function ensureBsc(p) {
+  const chainId = await p.request({ method: "eth_chainId" });
+  if (String(chainId).toLowerCase() === CHAIN_ID_HEX) return;
+  try {
+    await p.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CHAIN_ID_HEX }] });
+  } catch (e) {
+    if (e && e.code !== 4902) throw e;
+    await p.request({ method: "wallet_addEthereumChain", params: [{
+      chainId: CHAIN_ID_HEX, chainName: "BNB Smart Chain",
+      rpcUrls: ["https://bsc-dataseed.binance.org"],
+      nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+      blockExplorerUrls: ["https://bscscan.com"],
+    }] });
+  }
+}
+
+$("connect").addEventListener("click", async () => {
+  try {
+    const p = walletProvider();
+    if (!p) throw new Error("未检测到钱包，请用 Binance Wallet 的 DApp 浏览器打开本页");
+    await ensureBsc(p);
+    const accounts = await p.request({ method: "eth_requestAccounts" });
+    account = accounts && accounts[0];
+    if (!account) throw new Error("钱包未返回账户");
+    $("connectStatus").textContent = "已连接：" + account;
+    $("connectStatus").className = "status ok";
+  } catch (e) {
+    $("connectStatus").textContent = "连接失败：" + e.message;
+    $("connectStatus").className = "status err";
+  }
+});
+
+// ---- Known circuits from docs/handoff-2026-08-21-tapeout-pod.md §2.2 ----
+const KNOWN = [
+  { label: "#1188 · 4×4 乘法 (src61)", circuits: "0xb1024b89886B9a34Aa4ff5F31C411D708b20a14C", id: 1188, taskId: 60 },
+  { label: "#1195 · 4位大于 (src31)", circuits: "0xb1024b89886B9a34Aa4ff5F31C411D708b20a14C", id: 1195, taskId: 30 },
+  { label: "#1199 · 3位大于 (src149)", circuits: "0xb1024b89886B9a34Aa4ff5F31C411D708b20a14C", id: 1199, taskId: 140 },
+  { label: "#1201 · 2位大于 (src147)", circuits: "0xb1024b89886B9a34Aa4ff5F31C411D708b20a14C", id: 1201, taskId: 138 },
+  { label: "#1210 · 4位全1 (src222)", circuits: "0xb1024b89886B9a34Aa4ff5F31C411D708b20a14C", id: 1210, taskId: 206 },
+];
+
+function fmtMiner(m, key) {
+  const statusNames = { 0: "未认领", 1: "已认领/进行中", 2: "已降级(被抢)", 3: "已停止" };
+  return (
+    '<div class="miner-card">' +
+    "<div><b>key</b> <code>" + key + "</code></div>" +
+    "<div>题号 " + m.taskId + " · 状态 " + (statusNames[m.status] ?? m.status) +
+    (m.optimal ? '<span class="pill ok">最优首创</span>' : '<span class="pill">非最优</span>') + "</div>" +
+    "<div>b*=" + m.bstar + " bonus=" + m.bonus + " verifWeight=" + m.verifWeight + " unverWeight=" + m.unverWeight + "</div>" +
+    "<div>registrant " + short(m.registrant) + "</div>" +
+    "</div>"
+  );
+}
+function short(v) { return v ? v.slice(0, 6) + "…" + v.slice(-4) : "—"; }
+
+async function loadMiner(circuits, id) {
+  return withReadRetry(async (p) => {
+    const mining = new ethers.Contract(ADDR.mining, MINING_ABI, p);
+    const key = await mining.minerKey(circuits, id);
+    let miner = null, pending = 0n;
+    try {
+      miner = await mining.getMiner(key);
+      pending = await mining.pending(key);
+    } catch (e) { /* no miner yet */ }
+    return { key, miner, pending };
+  });
+}
+
+async function refreshKnownMiners() {
+  const list = $("minerList");
+  list.innerHTML = "读取中…";
+  const html = [];
+  for (const k of KNOWN) {
+    try {
+      const { key, miner, pending } = await loadMiner(k.circuits, k.id);
+      if (!miner || miner.circuits === ethers.ZeroAddress) {
+        html.push('<div class="miner-card">' + k.label + '<span class="pill">未 arm</span><div class="step">key ' + key + '</div></div>');
+      } else {
+        html.push(fmtMiner(miner, key) + '<div class="step">' + k.label + " · 待领取 " + ethers.formatUnits(pending, 8) + " BEM</div>");
+      }
+    } catch (e) {
+      html.push('<div class="miner-card">' + k.label + " · 读取失败：" + e.message + "</div>");
+    }
+  }
+  list.innerHTML = html.join("");
+}
+
+$("lookupBtn").addEventListener("click", async () => {
+  const status = $("lookupStatus");
+  try {
+    status.textContent = "读取中…";
+    const circuits = $("lookupCircuits").value.trim();
+    const id = $("lookupId").value.trim();
+    if (!ethers.isAddress(circuits) || !id) throw new Error("请填处理器地址和电路 ID");
+    const { key, miner, pending } = await loadMiner(circuits, id);
+    if (!miner || miner.circuits === ethers.ZeroAddress) {
+      status.innerHTML = "这颗电路还没有 arm 过。<br/>key = <code>" + key + "</code>";
+    } else {
+      status.innerHTML = fmtMiner(miner, key) + "待领取 " + ethers.formatUnits(pending, 8) + " BEM";
+    }
+    status.className = "status ok";
+  } catch (e) {
+    status.textContent = "失败：" + e.message;
+    status.className = "status err";
+  }
+});
+
+// ---- 认领新题目 flow state ----
+let claimState = {};
+
+$("loadTaskBtn").addEventListener("click", async () => {
+  const status = $("taskStatus");
+  const info = $("taskInfo");
+  try {
+    status.textContent = "读取中…";
+    const circuits = $("claimCircuits").value.trim();
+    const id = BigInt($("claimId").value.trim());
+    const taskId = Number($("claimTaskId").value.trim());
+    if (!ethers.isAddress(circuits)) throw new Error("处理器地址不对");
+
+    const result = await withReadRetry(async (p) => {
+      const circuitsC = new ethers.Contract(circuits, CIRCUITS_ABI, p);
+      const mining = new ethers.Contract(ADDR.mining, MINING_ABI, p);
+      const [nIn, nOut, nState, gateCount] = await circuitsC.circuitInfo(id);
+      // Pull the task's real definition from the TaskAdded event -- this
+      // is on-chain ground truth (vectorsRoot lives here), not any JSON
+      // file, so it works even while the site's own JSON is flaky.
+      const filter = mining.filters.TaskAdded(taskId);
+      const events = await mining.queryFilter(filter, 0, "latest");
+      if (events.length === 0) throw new Error("链上找不到题号 " + taskId + " 的 TaskAdded 事件——确认这是链上题号，不是官网 tasks.json 的 srcId（两套不一样，见交接文档 §2.4）");
+      const ev = events[events.length - 1];
+      const task = ev.args;
+      const sampleCount = await mining.sampleCountFor(gateCount, task.cycles);
+      return { nIn, nOut, nState, gateCount, task, sampleCount, p };
+    });
+
+    const pinOk = Number(result.nIn) === Number(result.task.nIn) && Number(result.nOut) === Number(result.task.nOut);
+
+    claimState = { circuits, id, taskId, ...result };
+
+    info.style.display = "block";
+    info.innerHTML =
+      '<div class="row"><span>电路接口</span><b>' + result.nIn + "→" + result.nOut + " / " + result.gateCount + " 门</b></div>" +
+      '<div class="row"><span>题目</span><b>#' + taskId + " " + result.task.name + "</b></div>" +
+      '<div class="row"><span>题目接口</span><b>' + result.task.nIn + "→" + result.task.nOut + (pinOk ? '<span class="pill ok">匹配</span>' : '<span class="pill err">不匹配！pin mismatch，会 revert</span>') + "</b></div>" +
+      '<div class="row"><span>向量总数</span><b>' + result.task.vectorCount + "</b></div>" +
+      '<div class="row"><span>抽检条数</span><b>' + result.sampleCount + "</b></div>" +
+      '<div class="row"><span>vectorsRoot（链上）</span><b><code>' + result.task.vectorsRoot + "</code></b></div>";
+
+    status.textContent = pinOk ? "读取完成，接口匹配。" : "读取完成，但接口不匹配——继续下去会 revert，不建议往下走。";
+    status.className = pinOk ? "status ok" : "status err";
+    $("previewBtn").style.display = "block";
+  } catch (e) {
+    status.textContent = "失败：" + e.message;
+    status.className = "status err";
+  }
+});
+
+$("previewBtn").addEventListener("click", async () => {
+  const status = $("previewStatus");
+  try {
+    status.textContent = "读取中…";
+    const { circuits, id, taskId } = claimState;
+    const preview = await withReadRetry(async (p) => {
+      const lens = new ethers.Contract(ADDR.lens, LENS_ABI, p);
+      return lens.previewScore(circuits, id, taskId);
+    });
+    if (preview.reason) {
+      status.textContent = "previewScore 报告问题：" + preview.reason;
+      status.className = "status err";
+      return;
+    }
+    status.innerHTML =
+      "H=" + preview.h + " b*=" + preview.bstar + " bonus=" + preview.bonus +
+      " optimal=" + preview.optimal + " samples=" + preview.samples +
+      "<br/>（optimal=false 表示已经有人比你便宜，仍然可以 arm/start，只是拿不到溢价，只进已验证池分工本那份）";
+    status.className = "status ok";
+    $("armBtn").style.display = "block";
+  } catch (e) {
+    status.textContent = "失败：" + e.message;
+    status.className = "status err";
+  }
+});
+
+$("armBtn").addEventListener("click", async () => {
+  const status = $("armStatus");
+  try {
+    if (!account) throw new Error("请先连接钱包");
+    const wp = walletProvider();
+    await ensureBsc(wp);
+    const { circuits, id } = claimState;
+    const iface = new ethers.Interface(MINING_ABI);
+    const data = iface.encodeFunctionData("arm", [circuits, id]);
+    status.textContent = "等待钱包确认 arm 交易…";
+    const hash = await wp.request({
+      method: "eth_sendTransaction",
+      params: [{ from: account, to: ADDR.mining, data, value: "0x0" }],
+    });
+    status.innerHTML = "已广播 arm：<a target=\"_blank\" href=\"https://bscscan.com/tx/" + hash + "\">BscScan ↗</a><br/>等待上链确认后再点第 ④ 步。";
+    status.className = "status ok";
+    $("fetchVectorsBtn").style.display = "block";
+  } catch (e) {
+    status.textContent = "失败：" + e.message;
+    status.className = "status err";
+  }
+});
+
+// ---- Vector sources to try, in order. None of these is trusted blindly --
+// the Merkle root recomputed from whatever we get back is checked against
+// the on-chain vectorsRoot before the start button is ever enabled. ----
+async function fetchTaskVectors(taskId) {
+  const urls = [
+    "https://tapeout.net/pod/pod-taskbank.json",
+    "https://tapeout.net/pod-taskbank.json",
+    "https://tapeout.net/pod/pod-vectors-all.json",
+  ];
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) continue;
+      const data = await res.json();
+      // Try a few plausible shapes: {taskId: {...}}, {tasks:{taskId:{...}}}, array indexed by taskId.
+      const candidate = data[String(taskId)] ?? data.tasks?.[String(taskId)] ?? (Array.isArray(data) ? data[taskId] : null);
+      if (candidate && (candidate.vectors || candidate.inputs)) return { url, data: candidate };
+    } catch (e) { /* try next source */ }
+  }
+  return null;
+}
+
+function merkleLeaf(index, input, out) {
+  const abi = ethers.AbiCoder.defaultAbiCoder();
+  const inner = ethers.keccak256(abi.encode(["uint32", "bytes", "bytes"], [index, input, out]));
+  return ethers.keccak256(inner);
+}
+function hashPair(a, b) {
+  const [x, y] = BigInt(a) < BigInt(b) ? [a, b] : [b, a];
+  return ethers.keccak256(ethers.concat([x, y]));
+}
+function buildMerkleTree(leaves) {
+  let level = leaves.slice();
+  const layers = [level];
+  while (level.length > 1) {
+    const next = [];
+    for (let i = 0; i < level.length; i += 2) {
+      next.push(i + 1 < level.length ? hashPair(level[i], level[i + 1]) : level[i]);
+    }
+    level = next;
+    layers.push(level);
+  }
+  return layers; // layers[0] = leaves, layers[last][0] = root
+}
+function merkleProof(layers, index) {
+  const proof = [];
+  let idx = index;
+  for (let l = 0; l < layers.length - 1; l++) {
+    const level = layers[l];
+    const pairIdx = idx % 2 === 0 ? idx + 1 : idx - 1;
+    if (pairIdx < level.length) proof.push(level[pairIdx]);
+    idx = Math.floor(idx / 2);
+  }
+  return proof;
+}
+
+$("fetchVectorsBtn").addEventListener("click", async () => {
+  const status = $("vectorStatus");
+  try {
+    status.textContent = "尝试抓官方向量数据…";
+    const { taskId, task } = claimState;
+    const found = await fetchTaskVectors(taskId);
+    if (!found) {
+      status.textContent = "三个已知来源都没抓到题号 " + taskId + " 的向量数据——官方向量包现在本身就在间歇失败（负载问题，不是本页的 bug）。过一会儿再试，或者等官方页面自己恢复。";
+      status.className = "status err";
+      return;
+    }
+    const vectors = found.data.vectors || found.data.inputs.map((inp, i) => ({ input: inp, out: found.data.outputs[i] }));
+    if (vectors.length !== Number(task.vectorCount)) {
+      status.textContent = "抓到了数据（来自 " + found.url + "），但条数 " + vectors.length + " 跟链上 vectorCount " + task.vectorCount + " 对不上，数据不可信，停止。";
+      status.className = "status err";
+      return;
+    }
+    const leaves = vectors.map((v, i) => merkleLeaf(i, v.input, v.out));
+    const layers = buildMerkleTree(leaves);
+    const computedRoot = layers[layers.length - 1][0];
+    if (computedRoot.toLowerCase() !== task.vectorsRoot.toLowerCase()) {
+      status.textContent = "本地算出的 Merkle 根跟链上 vectorsRoot 对不上（来源 " + found.url + "）——数据顺序或内容不对，不能用来 start，停止，不会解锁签名按钮。";
+      status.className = "status err";
+      return;
+    }
+    claimState.vectors = vectors;
+    claimState.layers = layers;
+    status.textContent = "✔ 核对通过（来源 " + found.url + "）：本地重算的 Merkle 根跟链上 vectorsRoot 完全一致，可以安全 start。";
+    status.className = "status ok";
+    $("startBtn").style.display = "block";
+    $("startBtn").disabled = false;
+  } catch (e) {
+    status.textContent = "失败：" + e.message;
+    status.className = "status err";
+  }
+});
+
+$("startBtn").addEventListener("click", async () => {
+  const status = $("startStatus");
+  try {
+    if (!account) throw new Error("请先连接钱包");
+    const { circuits, id, taskId, vectors, layers, sampleCount } = claimState;
+    const wp = walletProvider();
+    await ensureBsc(wp);
+
+    const mining = new ethers.Contract(ADDR.mining, MINING_ABI, await getReadProvider());
+    const key = await mining.minerKey(circuits, id);
+    const armBlock = await mining.armedAt(key);
+    if (armBlock === 0n) throw new Error("这颗电路还没有 arm 过，或 arm 交易还没确认，先完成第 ③ 步");
+
+    status.textContent = "读取 arm 区块的 blockhash…";
+    const armBlockHash = await withReadRetry((p) => p.send("eth_getBlockByNumber", [ethers.toBeHex(armBlock), false])).then((b) => b.hash);
+
+    status.textContent = "计算抽检下标…";
+    const abi = ethers.AbiCoder.defaultAbiCoder();
+    const indices = [];
+    for (let i = 0; i < Number(sampleCount); i++) {
+      const h = ethers.keccak256(abi.encode(["bytes32", "address", "uint256", "uint32"], [armBlockHash, circuits, id, i]));
+      const idx = Number(BigInt(h) % BigInt(vectors.length));
+      indices.push(idx);
+    }
+
+    const inputs = indices.map((i) => vectors[i].input);
+    const outs = indices.map((i) => vectors[i].out);
+    const proofs = indices.map((i) => merkleProof(layers, i));
+
+    const iface = new ethers.Interface(MINING_ABI);
+    const data = iface.encodeFunctionData("start", [circuits, id, taskId, armBlock, inputs, outs, proofs, ethers.ZeroHash]);
+
+    status.textContent = "等待钱包确认 start 交易（这是真实的、不可逆的认领交易）…";
+    const hash = await wp.request({
+      method: "eth_sendTransaction",
+      params: [{ from: account, to: ADDR.mining, data, value: "0x0" }],
+    });
+    status.innerHTML = "已广播 start：<a target=\"_blank\" href=\"https://bscscan.com/tx/" + hash + "\">BscScan ↗</a>";
+    status.className = "status ok";
+  } catch (e) {
+    status.textContent = "失败：" + e.message;
+    status.className = "status err";
+  }
+});
+
+$("claimBtn").addEventListener("click", async () => {
+  const status = $("claimStatus");
+  try {
+    if (!account) throw new Error("请先连接钱包");
+    const key = $("claimKey").value.trim();
+    if (!key || key.length !== 66) throw new Error("矿机 key 格式不对（应为 32 字节 0x... ）");
+    const wp = walletProvider();
+    await ensureBsc(wp);
+    const iface = new ethers.Interface(MINING_ABI);
+    const data = iface.encodeFunctionData("claim", [key]);
+    status.textContent = "等待钱包确认…";
+    const hash = await wp.request({
+      method: "eth_sendTransaction",
+      params: [{ from: account, to: ADDR.mining, data, value: "0x0" }],
+    });
+    status.innerHTML = "已广播：<a target=\"_blank\" href=\"https://bscscan.com/tx/" + hash + "\">BscScan ↗</a>";
+    status.className = "status ok";
+  } catch (e) {
+    status.textContent = "失败：" + e.message;
+    status.className = "status err";
+  }
+});
+
+// Prefill the lookup fields with the first known circuit for convenience.
+$("lookupCircuits").value = KNOWN[0].circuits;
+$("lookupId").value = KNOWN[0].id;
+$("claimCircuits").value = KNOWN[0].circuits;
+
+refreshKnownMiners().catch(() => {});
+</script>
+</body>
+</html>
