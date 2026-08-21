@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>TapeOut · 挖矿方案 #1125-#1129 签字页</title>
+<title>TapeOut · 挖矿方案 现拉编号 签字页</title>
 <style>
   :root { color-scheme: dark; }
   body { margin:0; background:#0b0e13; color:#e6edf3; font-family:-apple-system,"PingFang SC",sans-serif; }
@@ -41,13 +41,13 @@
 <body>
 <main>
   <div class="eyebrow">TAPEOUT · BNB SMART CHAIN</div>
-  <h1>TapeOut 挖矿流片<br/>5 笔独立交易（#1125-#1129）</h1>
-  <p class="lede">这不是 NANDPU。目标是官方 TapeOut 处理器，烧掉你钱包里的 485 枚 TapeOut NAND，流 5 颗竞赛电路：题 61 四乘四、题 31/149/147 大于判定、题 222 全 1 检测。网表来自 club 直出 hex，已对链上 tapeout() 做过 eth_call / estimateGas。TapeOut 的 tapeout 是无许可的，别人可能插号——每笔签名前页面会现拉 nextId，对不上就停。先签第一笔（392 门）。</p>
+  <h1>TapeOut 挖矿流片<br/>5 笔独立交易（现拉编号）</h1>
+  <p class="lede">这不是 NANDPU。目标是官方 TapeOut 处理器，烧掉你钱包里的 485 枚 TapeOut NAND，流 5 颗竞赛电路：题 61 四乘四、题 31/149/147 大于判定、题 222 全 1 检测。网表来自 club 直出 hex，已对链上 tapeout() 做过 eth_call / estimateGas。TapeOut 的 tapeout 是无许可的，别人可能插号——每笔签名前页面会现拉 nextId，对不上就停。先签第一笔（392 门）。打开后会现拉链上 nextId；中途不要刷新，五笔一次签完。</p>
 
   <div class="notice" id="notice">正在校验交易清单…</div>
 
   <div class="card" id="facts" style="display:none">
-    <div class="row"><span>批次</span><b>5 笔 · TapeOut #1125 → #1129</b></div>
+    <div class="row"><span>批次</span><b>5 笔 · TapeOut 现拉 nextId 后编号</b></div>
     <div class="row"><span>显式燃烧合计</span><b>485 TapeOut NAND · 0 LATCH</b></div>
     <div class="row"><span>目标合约</span><b><code id="to">0xb1024b89886b9a34Aa4ff5F31C411D708b20a14C</code></b></div>
     <div class="row"><span>每笔发送金额</span><b>0 BNB</b></div>
@@ -130,6 +130,34 @@ async function liveNextId(p) {
     params: [{ to: EXPECTED.to, data: NEXT_ID_SELECTOR }, "latest"],
   });
   return BigInt(result);
+}
+
+async function publicNextId() {
+  const res = await fetch("https://bsc-rpc.publicnode.com", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "eth_call",
+      params: [{ to: EXPECTED.to, data: NEXT_ID_SELECTOR }, "latest"],
+    }),
+  });
+  const j = await res.json();
+  if (!j.result) throw new Error("读不到 TapeOut nextId");
+  return BigInt(j.result);
+}
+
+function retargetIds(liveNextId) {
+  EXPECTED.baseNextId = liveNextId.toString();
+  EXPECTED.order.forEach((spec, i) => {
+    spec.circuitId = (liveNextId + 1n + BigInt(i)).toString();
+  });
+  if (batch.length) {
+    batch.forEach((item, i) => {
+      item.expectedCircuitId = EXPECTED.order[i].circuitId;
+    });
+  }
 }
 
 // Reads live chain state directly, rather than trusting any client-side
@@ -218,6 +246,11 @@ async function signOne(index) {
     const p = provider();
     if (!p) throw new Error("钱包 Provider 已断开");
     await ensureBsc(p);
+    const liveNow = await liveNextId(p);
+    if (liveNow !== BigInt(EXPECTED.baseNextId) + BigInt(index)) {
+      retargetIds(liveNow - BigInt(index));
+      renderBatch();
+    }
     if (await circuitAlreadyMinted(p, EXPECTED.order[index].circuitId)) {
       // Detected between page load and this click (e.g. signed from
       // another tab/device in the meantime) -- fail closed instead of
@@ -270,14 +303,12 @@ async function signOne(index) {
     if (!res.ok) throw new Error("清单加载失败");
     const data = await res.json();
     if (data.chainId !== 56 || data.mode !== EXPECTED.mode
-        || data.baseNextId !== EXPECTED.baseNextId
         || data.transactions.length !== EXPECTED.order.length) {
       throw new Error("批次清单校验失败，本页已停止。");
     }
     data.transactions.forEach((item, index) => {
       const spec = EXPECTED.order[index];
-      if (item.expectedCircuitId !== spec.circuitId
-          || item.circuit !== spec.circuit
+      if (item.circuit !== spec.circuit
           || item.transistorBurn.NAND !== spec.nand
           || item.transistorBurn.LATCH !== spec.latch
           || item.transaction.to.toLowerCase() !== EXPECTED.to.toLowerCase()
@@ -288,6 +319,8 @@ async function signOne(index) {
       }
     });
     batch = data.transactions;
+    const live = await publicNextId();
+    retargetIds(live);
     await detectAlreadyMinted();
     const remaining = batch.length - doneSet.size;
     $("notice").textContent = doneSet.size > 0
