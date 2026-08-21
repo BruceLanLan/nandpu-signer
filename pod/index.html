@@ -136,6 +136,10 @@ const ADDR = {
   token: "0x5ce033B2bFCa3Af30b3e8C8457DeaF776A8b695a",
 };
 const CHAIN_ID_HEX = "0x38";
+// PodMining deployment neighborhood (from tapeout.net/pod/pod-mainnet.json's
+// RefBench "fromBlock", 2026-08-21) -- used as the lower bound for TaskAdded
+// event scans so we never issue an unbounded eth_getLogs from block 0.
+const MINING_FROM_BLOCK = 117230000;
 
 // ---- ABIs extracted verbatim from tapeout.net/pod/assets/main-*.js (2026-08-21) ----
 const MINING_ABI = [
@@ -338,9 +342,24 @@ $("loadTaskBtn").addEventListener("click", async () => {
       // Pull the task's real definition from the TaskAdded event -- this
       // is on-chain ground truth (vectorsRoot lives here), not any JSON
       // file, so it works even while the site's own JSON is flaky.
+      //
+      // MINING_FROM_BLOCK to "latest" in chunks, NOT fromBlock=0: an
+      // unbounded eth_getLogs over BSC's whole history is enormous and
+      // is exactly what drove public RPC endpoints into repeated 429s
+      // during testing (caught before handoff, not a hypothetical).
+      // Free-tier public RPCs also cap a single eth_getLogs range at
+      // 10,000 blocks (hit this exact limit earlier building other
+      // NANDPU tooling this session).
       const filter = mining.filters.TaskAdded(taskId);
-      const events = await mining.queryFilter(filter, 0, "latest");
-      if (events.length === 0) throw new Error("链上找不到题号 " + taskId + " 的 TaskAdded 事件——确认这是链上题号，不是官网 tasks.json 的 srcId（两套不一样，见交接文档 §2.4）");
+      const latestBlock = await p.getBlockNumber();
+      const CHUNK = 9500;
+      let events = [];
+      for (let from = MINING_FROM_BLOCK; from <= latestBlock; from += CHUNK) {
+        const to = Math.min(from + CHUNK - 1, latestBlock);
+        const chunkEvents = await mining.queryFilter(filter, from, to);
+        events = events.concat(chunkEvents);
+      }
+      if (events.length === 0) throw new Error("链上找不到题号 " + taskId + " 的 TaskAdded 事件（扫了区块 " + MINING_FROM_BLOCK + " 到 " + latestBlock + "）——确认这是链上题号，不是官网 tasks.json 的 srcId（两套不一样，见交接文档 §2.4）");
       const ev = events[events.length - 1];
       const task = ev.args;
       const sampleCount = await mining.sampleCountFor(gateCount, task.cycles);
