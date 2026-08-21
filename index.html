@@ -97,8 +97,9 @@ const EXPECTED = {
   creator: "0x71c258DBBDf364a2204f010dc981493a33a9A720",
 };
 const NEXT_ID_SELECTOR = "0x61b8ce8c";
+const CIRCUIT_INFO_SELECTOR = "0x084d60f1"; // circuitInfo(uint256)
 const $ = (id) => document.getElementById(id);
-let batch = [], account = "";
+let batch = [], account = "", doneSet = new Set();
 
 function provider() {
   const w = window;
@@ -131,11 +132,62 @@ async function liveNextId(p) {
   return BigInt(result);
 }
 
+// Reads live chain state directly, rather than trusting any client-side
+// "already signed" memory (which resets on reload/new tab/new device and
+// is exactly the bug that motivated this function): a circuit ID already
+// minted means circuitInfo(id) resolves; an unminted ID reverts ("no
+// circuit"). This lets the page silently skip past transactions the
+// owner already broadcast in an earlier visit, instead of asking them to
+// track which button to click next.
+async function circuitAlreadyMinted(p, circuitId) {
+  try {
+    const hex = BigInt(circuitId).toString(16).padStart(64, "0");
+    const result = await p.request({
+      method: "eth_call",
+      params: [{ to: EXPECTED.to, data: CIRCUIT_INFO_SELECTOR + hex }, "latest"],
+    });
+    return !!result && result !== "0x";
+  } catch (e) {
+    return false;
+  }
+}
+
+async function detectAlreadyMinted() {
+  const p = provider();
+  if (!p) return; // no provider yet -- fall back to showing everything as pending; the per-signature live nextId check still protects against double-signing
+  const flags = await Promise.all(
+    EXPECTED.order.map((spec) => circuitAlreadyMinted(p, spec.circuitId)),
+  );
+  flags.forEach((done, index) => { if (done) doneSet.add(index); });
+}
+
+function firstPendingIndex() {
+  for (let i = 0; i < batch.length; i += 1) if (!doneSet.has(i)) return i;
+  return -1;
+}
+
 function renderBatch() {
   const list = $("txList");
   list.innerHTML = "";
-  batch.forEach((item, index) => {
+  const pendingFirst = firstPendingIndex();
+
+  // Already-minted transactions render first, collapsed and muted, no
+  // button -- audit trail, not part of the active signing flow.
+  const doneIndices = [...doneSet].sort((a, b) => a - b);
+  for (const index of doneIndices) {
     const spec = EXPECTED.order[index];
+    const box = document.createElement("div");
+    box.className = "tx done";
+    box.innerHTML =
+      '<h3>#' + spec.circuitId + ' · ' + spec.label + '</h3>' +
+      '<div class="meta status ok">✔ 已在链上（检测到 circuitInfo(#' + spec.circuitId + ') 存在），本页跳过</div>';
+    list.appendChild(box);
+  }
+
+  batch.forEach((item, index) => {
+    if (doneSet.has(index)) return;
+    const spec = EXPECTED.order[index];
+    const isNext = index === pendingFirst;
     const box = document.createElement("div");
     box.className = "tx";
     box.id = "tx-" + index;
@@ -143,12 +195,17 @@ function renderBatch() {
       '<h3>#' + spec.circuitId + ' · ' + spec.label + '</h3>' +
       '<div class="meta">燃烧 <b>' + spec.nand + ' NAND · ' + spec.latch + ' LATCH</b> · 预估 gas <b>' +
       Number(item.estimatedGas).toLocaleString() + '</b></div>' +
-      '<div class="meta status" id="txstatus-' + index + '">' + (index === 0 ? '待签名' : '等待前一笔完成') + '</div>' +
-      '<button class="primary" id="txsign-' + index + '"' + (index === 0 ? '' : ' disabled') + '>签署这一笔</button>';
+      '<div class="meta status" id="txstatus-' + index + '">' + (isNext ? '待签名' : '等待前一笔完成') + '</div>' +
+      '<button class="primary" id="txsign-' + index + '"' + (isNext ? '' : ' disabled') + '>签署这一笔</button>';
     list.appendChild(box);
     $("txsign-" + index).addEventListener("click", () => signOne(index));
   });
   $("txList").style.display = "block";
+
+  if (pendingFirst === -1) {
+    $("status").className = "status ok";
+    $("status").textContent = doneSet.size + " 笔全部完成 ✅ 通知 NANDPU 执行链上验证。";
+  }
 }
 
 async function signOne(index) {
@@ -161,6 +218,15 @@ async function signOne(index) {
     const p = provider();
     if (!p) throw new Error("钱包 Provider 已断开");
     await ensureBsc(p);
+    if (await circuitAlreadyMinted(p, EXPECTED.order[index].circuitId)) {
+      // Detected between page load and this click (e.g. signed from
+      // another tab/device in the meantime) -- fail closed instead of
+      // re-sending, then refresh the on-chain state and re-render.
+      doneSet.add(index);
+      await detectAlreadyMinted();
+      renderBatch();
+      throw new Error("这笔已经在链上了（检测到 circuitInfo 存在），本页已跳过，无需重复签名。");
+    }
     const nextId = await liveNextId(p);
     const required = BigInt(EXPECTED.baseNextId) + BigInt(index);
     if (nextId !== required) {
@@ -172,17 +238,20 @@ async function signOne(index) {
     const hash = await p.request({ method: "eth_sendTransaction", params: [item.transaction] });
     status.className = "meta status ok";
     status.innerHTML = '已广播 · <a target="_blank" href="https://bscscan.com/tx/' + hash + '">BscScan ↗</a>';
-    $("tx-" + index).classList.add("done");
-    if (index + 1 < batch.length) {
-      const nextBtn = $("txsign-" + (index + 1));
-      nextBtn.disabled = false;
-      $("txstatus-" + (index + 1)).textContent = "待签名";
+    doneSet.add(index);
+    const next = firstPendingIndex();
+    if (next !== -1) {
+      const nextBtn = $("txsign-" + next);
+      if (nextBtn) {
+        nextBtn.disabled = false;
+        $("txstatus-" + next).textContent = "待签名";
+      }
     } else {
       $("status").className = "status ok";
-      $("status").textContent = "5 笔全部完成 ✅ 通知 NANDPU 执行链上验证。";
+      $("status").textContent = doneSet.size + " 笔全部完成 ✅ 通知 NANDPU 执行链上验证。";
     }
   } catch (e) {
-    $("txsign-" + index).disabled = false;
+    if ($("txsign-" + index)) $("txsign-" + index).disabled = false;
     status.textContent = "已停止 · " + e.message;
   }
 }
@@ -219,7 +288,11 @@ async function signOne(index) {
       }
     });
     batch = data.transactions;
-    $("notice").textContent = "清单校验通过：5 笔 · 4,359 NAND · 每笔 0 BNB。请用创建者钱包连接。";
+    await detectAlreadyMinted();
+    const remaining = batch.length - doneSet.size;
+    $("notice").textContent = doneSet.size > 0
+      ? "清单校验通过：检测到 " + doneSet.size + " 笔已在链上（自动跳过），剩余 " + remaining + " 笔待签。请用创建者钱包连接。"
+      : "清单校验通过：5 笔 · 4,359 NAND · 每笔 0 BNB。请用创建者钱包连接。";
     $("notice").classList.add("ok");
     $("facts").style.display = "block";
     $("connect").style.display = "block";

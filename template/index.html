@@ -3,7 +3,10 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>NANDPU · Circuits #10-#13 批量签字页</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>NANDPU · Circuits #36-#40 批量签字页</title>
 <style>
   :root { color-scheme: dark; }
   body { margin:0; background:#0b0e13; color:#e6edf3; font-family:-apple-system,"PingFang SC",sans-serif; }
@@ -38,27 +41,28 @@
 <body>
 <main>
   <div class="eyebrow">TAPEOUT · BNB SMART CHAIN</div>
-  <h1>NANDPU Circuits #10-#13<br/>批量签字页（4 笔独立交易）</h1>
-  <p class="lede">四颗大脑器官一次窗口、逐笔签字：#10 符号层（有符号乘法器）→ #11 Latch 单元 → #12 4 位寄存器 → #13 8 位心跳计数器。每笔都是独立交易，钱包逐笔弹窗确认；可随时停止，已签的永久生效，未签的关页后作废。页面不读、不存私钥，也不会自动发送。</p>
+  <h1>NANDPU Circuits #36-#40<br/>批量签字页（5 笔独立交易，接续 #32-#35）</h1>
+  <p class="lede">D-035 Wallace 树平替批次的后半段：前一个窗口的 #32-#35（无符号/有符号 4×4/8×8 乘法器）已经上链并完成链上 eval() 差分校验（20 组向量全部一致）。这个页面接着签剩下 5 笔：#36 无符号 8×8 MAC、#37 有符号 8×8 MAC、#38 Dot4-U4、#39 Dot4-Q4S、#40 Dot2-Q4S——都是已上链电路的深度优化平替（旧电路不动，D-002），题库里没有对应题，纯粹是 NANDPU 自己的 AI 计算栈原语（D-033）。每笔都是独立交易，钱包逐笔弹窗确认；可随时停止，已签的永久生效，未签的关页后作废。页面不读、不存私钥，也不会自动发送。</p>
 
   <div class="notice" id="notice">正在校验交易清单…</div>
 
   <div class="card" id="facts" style="display:none">
-    <div class="row"><span>批次</span><b>4 笔 · #10 → #13</b></div>
-    <div class="row"><span>显式燃烧合计</span><b>597 NAND · 13 LATCH</b></div>
+    <div class="row"><span>批次</span><b>5 笔 · #36 → #40（接续已完成的 #32-#35）</b></div>
+    <div class="row"><span>显式燃烧合计</span><b>4,359 NAND · 0 LATCH</b></div>
     <div class="row"><span>目标合约</span><b><code id="to">0x86332F5BF2448b726AC4e4B427d16101bE3a28aA</code></b></div>
     <div class="row"><span>每笔发送金额</span><b>0 BNB</b></div>
     <div class="row"><span>创建者钱包</span><b><code id="from">0x71c258DBBDf364a2204f010dc981493a33a9A720</code></b></div>
   </div>
 
   <button class="primary" id="connect" style="display:none">连接 Binance Wallet</button>
+  <div class="status" id="connectStatus"></div>
 
   <div id="txList" style="display:none"></div>
 
   <div class="card" id="actions" style="display:none">
     <label class="confirm">
       <input type="checkbox" id="confirmBurn" />
-      <span>我确认将永久销毁本批共 597 个 NAND 与 13 个 LATCH 晶体管（不可逆），且每笔交易发送金额为 0 BNB。</span>
+      <span>我确认将永久销毁本批共 4,359 个 NAND 晶体管（不可逆），且每笔交易发送金额为 0 BNB。</span>
     </label>
     <div class="notice warn" id="compareBox" style="display:block">
       <b>钱包弹窗逐项对照（防钓鱼）</b>：每一笔弹窗都核对——链 <b>BNB Smart Chain (0x38)</b>、目标合约前 4 位 <b>8633</b>、金额 <b>0 BNB</b>。任何一项不一致，点「拒绝」。
@@ -81,19 +85,21 @@
 const EXPECTED = {
   chainId: "0x38",
   mode: "UNSIGNED_BATCH_RELEASE",
-  baseNextId: "9",
+  baseNextId: "35",
   order: [
-    { circuitId: "10", circuit: "mult-4x4-signed", nand: 483, latch: 0, label: "Signed 4×4 Multiplier (Baugh-Wooley)" },
-    { circuitId: "11", circuit: "latch-cell", nand: 10, latch: 1, label: "LATCH Cell (enabled)" },
-    { circuitId: "12", circuit: "register-4", nand: 40, latch: 4, label: "4-bit Register" },
-    { circuitId: "13", circuit: "counter-8", nand: 64, latch: 8, label: "8-bit Heartbeat Counter" },
+    { circuitId: "36", circuit: "mac-8x8-w16-fast", nand: 899, latch: 0, label: "8×8 无符号 MAC（Wallace 树优化）" },
+    { circuitId: "37", circuit: "mac-8x8-w16-signed-fast", nand: 913, latch: 0, label: "8×8 有符号 MAC（Wallace 树优化）" },
+    { circuitId: "38", circuit: "dot4-u4-fast", nand: 1060, latch: 0, label: "Dot4-U4（4 路无符号点积，Wallace 树优化）" },
+    { circuitId: "39", circuit: "dot4-q4s-fast", nand: 1052, latch: 0, label: "Dot4-Q4S（4 路有符号量化点积，Wallace 树优化）" },
+    { circuitId: "40", circuit: "dot2-q4s-fast", nand: 435, latch: 0, label: "Dot2-Q4S（2 路有符号量化点积，Wallace 树优化）" },
   ],
   to: "0x86332F5BF2448b726AC4e4B427d16101bE3a28aA",
   creator: "0x71c258DBBDf364a2204f010dc981493a33a9A720",
 };
 const NEXT_ID_SELECTOR = "0x61b8ce8c";
+const CIRCUIT_INFO_SELECTOR = "0x084d60f1"; // circuitInfo(uint256)
 const $ = (id) => document.getElementById(id);
-let batch = [], account = "";
+let batch = [], account = "", doneSet = new Set();
 
 function provider() {
   const w = window;
@@ -126,11 +132,62 @@ async function liveNextId(p) {
   return BigInt(result);
 }
 
+// Reads live chain state directly, rather than trusting any client-side
+// "already signed" memory (which resets on reload/new tab/new device and
+// is exactly the bug that motivated this function): a circuit ID already
+// minted means circuitInfo(id) resolves; an unminted ID reverts ("no
+// circuit"). This lets the page silently skip past transactions the
+// owner already broadcast in an earlier visit, instead of asking them to
+// track which button to click next.
+async function circuitAlreadyMinted(p, circuitId) {
+  try {
+    const hex = BigInt(circuitId).toString(16).padStart(64, "0");
+    const result = await p.request({
+      method: "eth_call",
+      params: [{ to: EXPECTED.to, data: CIRCUIT_INFO_SELECTOR + hex }, "latest"],
+    });
+    return !!result && result !== "0x";
+  } catch (e) {
+    return false;
+  }
+}
+
+async function detectAlreadyMinted() {
+  const p = provider();
+  if (!p) return; // no provider yet -- fall back to showing everything as pending; the per-signature live nextId check still protects against double-signing
+  const flags = await Promise.all(
+    EXPECTED.order.map((spec) => circuitAlreadyMinted(p, spec.circuitId)),
+  );
+  flags.forEach((done, index) => { if (done) doneSet.add(index); });
+}
+
+function firstPendingIndex() {
+  for (let i = 0; i < batch.length; i += 1) if (!doneSet.has(i)) return i;
+  return -1;
+}
+
 function renderBatch() {
   const list = $("txList");
   list.innerHTML = "";
-  batch.forEach((item, index) => {
+  const pendingFirst = firstPendingIndex();
+
+  // Already-minted transactions render first, collapsed and muted, no
+  // button -- audit trail, not part of the active signing flow.
+  const doneIndices = [...doneSet].sort((a, b) => a - b);
+  for (const index of doneIndices) {
     const spec = EXPECTED.order[index];
+    const box = document.createElement("div");
+    box.className = "tx done";
+    box.innerHTML =
+      '<h3>#' + spec.circuitId + ' · ' + spec.label + '</h3>' +
+      '<div class="meta status ok">✔ 已在链上（检测到 circuitInfo(#' + spec.circuitId + ') 存在），本页跳过</div>';
+    list.appendChild(box);
+  }
+
+  batch.forEach((item, index) => {
+    if (doneSet.has(index)) return;
+    const spec = EXPECTED.order[index];
+    const isNext = index === pendingFirst;
     const box = document.createElement("div");
     box.className = "tx";
     box.id = "tx-" + index;
@@ -138,12 +195,17 @@ function renderBatch() {
       '<h3>#' + spec.circuitId + ' · ' + spec.label + '</h3>' +
       '<div class="meta">燃烧 <b>' + spec.nand + ' NAND · ' + spec.latch + ' LATCH</b> · 预估 gas <b>' +
       Number(item.estimatedGas).toLocaleString() + '</b></div>' +
-      '<div class="meta status" id="txstatus-' + index + '">' + (index === 0 ? '待签名' : '等待前一笔完成') + '</div>' +
-      '<button class="primary" id="txsign-' + index + '"' + (index === 0 ? '' : ' disabled') + '>签署这一笔</button>';
+      '<div class="meta status" id="txstatus-' + index + '">' + (isNext ? '待签名' : '等待前一笔完成') + '</div>' +
+      '<button class="primary" id="txsign-' + index + '"' + (isNext ? '' : ' disabled') + '>签署这一笔</button>';
     list.appendChild(box);
     $("txsign-" + index).addEventListener("click", () => signOne(index));
   });
   $("txList").style.display = "block";
+
+  if (pendingFirst === -1) {
+    $("status").className = "status ok";
+    $("status").textContent = doneSet.size + " 笔全部完成 ✅ 通知 NANDPU 执行链上验证。";
+  }
 }
 
 async function signOne(index) {
@@ -156,6 +218,15 @@ async function signOne(index) {
     const p = provider();
     if (!p) throw new Error("钱包 Provider 已断开");
     await ensureBsc(p);
+    if (await circuitAlreadyMinted(p, EXPECTED.order[index].circuitId)) {
+      // Detected between page load and this click (e.g. signed from
+      // another tab/device in the meantime) -- fail closed instead of
+      // re-sending, then refresh the on-chain state and re-render.
+      doneSet.add(index);
+      await detectAlreadyMinted();
+      renderBatch();
+      throw new Error("这笔已经在链上了（检测到 circuitInfo 存在），本页已跳过，无需重复签名。");
+    }
     const nextId = await liveNextId(p);
     const required = BigInt(EXPECTED.baseNextId) + BigInt(index);
     if (nextId !== required) {
@@ -167,20 +238,31 @@ async function signOne(index) {
     const hash = await p.request({ method: "eth_sendTransaction", params: [item.transaction] });
     status.className = "meta status ok";
     status.innerHTML = '已广播 · <a target="_blank" href="https://bscscan.com/tx/' + hash + '">BscScan ↗</a>';
-    $("tx-" + index).classList.add("done");
-    if (index + 1 < batch.length) {
-      const nextBtn = $("txsign-" + (index + 1));
-      nextBtn.disabled = false;
-      $("txstatus-" + (index + 1)).textContent = "待签名";
+    doneSet.add(index);
+    const next = firstPendingIndex();
+    if (next !== -1) {
+      const nextBtn = $("txsign-" + next);
+      if (nextBtn) {
+        nextBtn.disabled = false;
+        $("txstatus-" + next).textContent = "待签名";
+      }
     } else {
       $("status").className = "status ok";
-      $("status").textContent = "4 笔全部完成 ✅ 通知 NANDPU 执行链上验证。";
+      $("status").textContent = doneSet.size + " 笔全部完成 ✅ 通知 NANDPU 执行链上验证。";
     }
   } catch (e) {
-    $("txsign-" + index).disabled = false;
+    if ($("txsign-" + index)) $("txsign-" + index).disabled = false;
     status.textContent = "已停止 · " + e.message;
   }
 }
+
+(function reportProviderState() {
+  const w = window;
+  const hasEthereum = !!(w.ethereum && w.ethereum.request);
+  const hasBinanceChain = !!w.BinanceChain;
+  $("connectStatus").textContent =
+    "Provider 检测：window.ethereum=" + hasEthereum + "，window.BinanceChain=" + hasBinanceChain;
+})();
 
 (async function boot() {
   try {
@@ -206,7 +288,11 @@ async function signOne(index) {
       }
     });
     batch = data.transactions;
-    $("notice").textContent = "清单校验通过：4 笔 · 597 NAND + 13 LATCH · 每笔 0 BNB。请用创建者钱包连接。";
+    await detectAlreadyMinted();
+    const remaining = batch.length - doneSet.size;
+    $("notice").textContent = doneSet.size > 0
+      ? "清单校验通过：检测到 " + doneSet.size + " 笔已在链上（自动跳过），剩余 " + remaining + " 笔待签。请用创建者钱包连接。"
+      : "清单校验通过：5 笔 · 4,359 NAND · 每笔 0 BNB。请用创建者钱包连接。";
     $("notice").classList.add("ok");
     $("facts").style.display = "block";
     $("connect").style.display = "block";
@@ -217,21 +303,41 @@ async function signOne(index) {
   }
 })();
 
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(label + "超时（" + (ms / 1000) + "秒无响应）——钱包弹窗可能被挡住了，检查是否有待处理的钱包弹窗，或退出重进本页")), ms)),
+  ]);
+}
+
 $("connect").addEventListener("click", async () => {
+  const btn = $("connect");
+  const status = $("connectStatus");
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = "连接中…";
+  status.textContent = "① 检测钱包 provider…";
   try {
     const p = provider();
-    if (!p) throw new Error("未检测到钱包。请用 Binance Wallet 的 DApp 浏览器打开本页。");
-    await ensureBsc(p);
-    const accounts = await p.request({ method: "eth_requestAccounts" });
+    if (!p) throw new Error("未检测到钱包 provider。请退出本页重新从 Binance Wallet App 首页打开，而不是用浏览器历史记录/收藏夹里的旧标签页。");
+    status.textContent = "② 确认链为 BNB Smart Chain…";
+    await withTimeout(ensureBsc(p), 15000, "切换链");
+    status.textContent = "③ 等待钱包弹窗授权连接…";
+    const accounts = await withTimeout(p.request({ method: "eth_requestAccounts" }), 30000, "请求账户授权");
     const selected = accounts && accounts[0];
-    if (!selected || selected.toLowerCase() !== EXPECTED.creator.toLowerCase()) {
-      throw new Error("钱包地址不匹配，必须使用创建者 " + EXPECTED.creator);
+    if (!selected) throw new Error("钱包未返回任何账户，请在钱包里确认已解锁并选中账户");
+    if (selected.toLowerCase() !== EXPECTED.creator.toLowerCase()) {
+      throw new Error("钱包地址不匹配：当前 " + short(selected) + "，必须使用创建者 " + EXPECTED.creator);
     }
     account = selected;
-    $("connect").textContent = short(selected) + " · 已连接";
+    btn.textContent = short(selected) + " · 已连接";
+    status.textContent = "连接成功 ✓";
     $("notice").textContent = "创建者钱包已连接。逐笔签名：每笔弹窗前页面会实时核对链上 nextId。";
     $("notice").classList.add("ok");
   } catch (e) {
+    btn.disabled = false;
+    btn.textContent = originalText;
+    status.textContent = "已停止 · " + e.message;
     $("notice").textContent = "连接失败：" + e.message;
   }
 });
