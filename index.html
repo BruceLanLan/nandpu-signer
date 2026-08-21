@@ -1,11 +1,272 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"/><title>NANDPU · 签字窗口已关闭</title>
-<style>body{margin:0;background:#0b0e13;color:#e6edf3;font-family:-apple-system,sans-serif;display:flex;justify-content:center;padding-top:15vh}
-main{max-width:560px;padding:0 16px;text-align:center}
-h1{font-size:26px}.ok{color:#7ee787}a{color:#58a6ff}code{color:#7ee787}</style></head>
-<body><main>
-<div class="ok">✔ Circuits #32-#40 已上链并验证</div>
-<h1>签字窗口已关闭</h1>
-<p>NANDPU Circuits #32-#40（D-035 Wallace 树深度优化平替批次）已于 2026-08-20 通过两个批量签字窗口（D-014）流片成功：#32-#35（无符号/有符号 4×4/8×8 乘法器）与 #36-#40（无符号/有符号 8×8 MAC、Dot4-U4、Dot4-Q4S、Dot2-Q4S），合计烧毁 6,240 NAND、0 LATCH。每颗都在签字后重新拉取链上 eval() 做差分校验（35 组向量），与本地模拟、独立计算的数学期望三方一致。旧电路（#3/#10/#18/#22/#23/#24）保持不可变，这 9 颗是深度优化的平替候选，不是替换。本页的未签名清单已作废，不再提供任何签名功能。</p>
-<p><a href="https://tapeout.net/#p/0x86332F5BF2448b726AC4e4B427d16101bE3a28aA">在 TapeOut 查看 NANDPU →</a></p>
-</main></body></html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>NANDPU · Circuit #41 签字页</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; background:#0b0e13; color:#e6edf3; font-family:-apple-system,"PingFang SC",sans-serif; }
+  main { max-width:640px; margin:0 auto; padding:24px 16px 64px; }
+  .eyebrow { color:#8b949e; font-size:12px; letter-spacing:.15em; text-transform:uppercase; }
+  h1 { font-size:30px; margin:8px 0 4px; }
+  .lede { color:#a5b1bd; line-height:1.6; }
+  .card { background:#151a22; border:1px solid #232b36; border-radius:12px; padding:18px; margin:16px 0; }
+  .row { display:flex; justify-content:space-between; gap:8px; padding:6px 0; border-bottom:1px dashed #232b36; }
+  .row:last-child { border-bottom:none; }
+  .row span { color:#8b949e; }
+  .row b { text-align:right; word-break:break-all; }
+  code { color:#7ee787; font-size:13px; }
+  button { width:100%; padding:14px; border:none; border-radius:10px; font-size:16px; font-weight:600; cursor:pointer; }
+  .primary { background:#2ea043; color:#fff; }
+  .secondary { background:#21262d; color:#e6edf3; margin-top:8px; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .notice { background:#1a2332; border:1px solid #30363d; border-radius:10px; padding:12px; margin:12px 0; font-size:14px; }
+  .notice.ok { border-color:#2ea043; }
+  label.confirm { display:flex; gap:10px; align-items:flex-start; margin:14px 0; font-size:14px; color:#f0b429; }
+  .status { margin-top:10px; font-size:14px; color:#8b949e; }
+  .status.ok { color:#7ee787; }
+  a { color:#58a6ff; }
+  .warn { color:#f85149; }
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">TAPEOUT · BNB SMART CHAIN</div>
+  <h1>NANDPU Circuit #41<br/>Dot8-Q4S（8 路有符号量化点积）</h1>
+  <p class="lede">关闭 D-033 记录的"MatMul 8×8+"缺口：8 路有符号量化点积，全摊平、零 REF（D-034），逐路乘法用 Wallace 树、8 路求和用平衡二叉树而不是顺序累加（D-035 的教训在设计阶段就用上，不是事后修）——深度 54，比这批之前只有 4 路的 Dot4Q4S（深度 110）还浅。边界值 + 8 组单路极限用例 + 5 万组随机向量本地验证全过。本页只请求你的钱包做一件事——签署这一笔流片交易。页面不读、不存私钥，也不会自动发送。</p>
+
+  <div class="notice" id="notice">正在校验交易清单…</div>
+
+  <div class="card" id="facts" style="display:none">
+    <div class="row"><span>电路 ID（预期）</span><b>#41</b></div>
+    <div class="row"><span>显式燃烧</span><b>2,059 NAND · 0 LATCH</b></div>
+    <div class="row"><span>REF 依赖</span><b>无（零 REF）</b></div>
+    <div class="row"><span>目标合约</span><b><code id="to">0x86332F5BF2448b726AC4e4B427d16101bE3a28aA</code></b></div>
+    <div class="row"><span>发送金额</span><b>0 BNB</b></div>
+    <div class="row"><span>创建者钱包</span><b><code id="from">0x71c258DBBDf364a2204f010dc981493a33a9A720</code></b></div>
+    <div class="row"><span>预估 gas</span><b id="gas">—</b></div>
+  </div>
+
+  <button class="primary" id="connect" style="display:none">连接 Binance Wallet</button>
+  <div class="status" id="connectStatus"></div>
+
+  <div class="card" id="actions" style="display:none">
+    <label class="confirm">
+      <input type="checkbox" id="confirmBurn" />
+      <span>我确认将永久销毁 2,059 个 NAND 晶体管（不可逆），且本笔交易发送金额为 0 BNB。</span>
+    </label>
+    <div class="notice warn" id="compareBox" style="display:block">
+      <b>钱包弹窗逐项对照（防钓鱼）</b>：请在钱包弹窗里核对以下三项与本页完全一致——
+      链 <b>BNB Smart Chain (0x38)</b>、目标合约前 4 位 <b id="to4">8633</b>、
+      金额 <b>0 BNB</b>。任何一项不一致，点「拒绝」。
+    </div>
+    <div class="notice">
+      <span>请输入目标合约地址第 3-6 位（例如 <b id="hint4">332F</b>）以确认你核对过：</span>
+      <input type="text" id="confirmCode" maxlength="4" placeholder="332F"
+             style="margin-top:8px;padding:10px;border-radius:8px;border:1px solid #30363d;background:#0b0e13;color:#e6edf3;font-size:16px;width:120px;text-transform:uppercase" />
+    </div>
+    <button class="secondary" id="simulate">只读模拟（不发送）</button>
+    <button class="primary" id="sign" style="margin-top:8px">请求钱包签名</button>
+    <div class="status" id="status">未操作</div>
+  </div>
+
+  <div class="notice warn">
+    安全边界：不要向任何人提供助记词或私钥。钱包弹窗中的目标合约应为
+    <code>0x8633…28aA</code>，金额应为 <b>0 BNB</b>；任何一项不一致就拒绝。
+  </div>
+</main>
+<script>
+"use strict";
+const EXPECTED = {
+  chainId: "0x38",
+  mode: "UNSIGNED_SINGLE_CIRCUIT_RELEASE",
+  currentNextId: "40",
+  expectedCircuitId: "41",
+  circuit: "dot8-q4s",
+  nandBurn: 2059,
+  latchBurn: 0,
+  to: "0x86332F5BF2448b726AC4e4B427d16101bE3a28aA",
+  creator: "0x71c258DBBDf364a2204f010dc981493a33a9A720",
+};
+const NEXT_ID_SELECTOR = "0x61b8ce8c";
+const CIRCUIT_INFO_SELECTOR = "0x084d60f1"; // circuitInfo(uint256)
+const $ = (id) => document.getElementById(id);
+let manifest = null, account = "";
+
+function provider() {
+  const w = window;
+  return (w.ethereum && w.ethereum.request ? w.ethereum : null)
+      || (w.BinanceChain ? w.BinanceChain : null);
+}
+function short(v) { return v.slice(0, 6) + "…" + v.slice(-4); }
+
+async function ensureBsc(p) {
+  const chainId = await p.request({ method: "eth_chainId" });
+  if (String(chainId).toLowerCase() === EXPECTED.chainId) return;
+  try {
+    await p.request({ method: "wallet_switchEthereumChain", params: [{ chainId: EXPECTED.chainId }] });
+  } catch (e) {
+    if (e && e.code !== 4902) throw e;
+    await p.request({ method: "wallet_addEthereumChain", params: [{
+      chainId: EXPECTED.chainId, chainName: "BNB Smart Chain",
+      rpcUrls: ["https://bsc-dataseed.binance.org"],
+      nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+      blockExplorerUrls: ["https://bscscan.com"],
+    }] });
+  }
+}
+
+async function liveNextId(p) {
+  const result = await p.request({
+    method: "eth_call",
+    params: [{ to: EXPECTED.to, data: NEXT_ID_SELECTOR }, "latest"],
+  });
+  return BigInt(result);
+}
+
+// Same auto-detect fix applied to the D-035 batch template (2026-08-20):
+// check live chain state instead of only trusting the client-side flow.
+async function circuitAlreadyMinted(p, circuitId) {
+  try {
+    const hex = BigInt(circuitId).toString(16).padStart(64, "0");
+    const result = await p.request({
+      method: "eth_call",
+      params: [{ to: EXPECTED.to, data: CIRCUIT_INFO_SELECTOR + hex }, "latest"],
+    });
+    return !!result && result !== "0x";
+  } catch (e) {
+    return false;
+  }
+}
+
+(function reportProviderState() {
+  const w = window;
+  const hasEthereum = !!(w.ethereum && w.ethereum.request);
+  const hasBinanceChain = !!w.BinanceChain;
+  $("connectStatus").textContent =
+    "Provider 检测：window.ethereum=" + hasEthereum + "，window.BinanceChain=" + hasBinanceChain;
+})();
+
+(async function boot() {
+  try {
+    const res = await fetch("manifest.json", { cache: "no-store" });
+    if (!res.ok) throw new Error("清单加载失败");
+    const data = await res.json();
+    const item = data.transactions && data.transactions[0];
+    if (data.chainId !== 56 || data.mode !== EXPECTED.mode
+        || data.currentNextId !== EXPECTED.currentNextId
+        || data.transactions.length !== 1
+        || item.expectedCircuitId !== EXPECTED.expectedCircuitId
+        || item.circuit !== EXPECTED.circuit
+        || item.transistorBurn.NAND !== EXPECTED.nandBurn
+        || item.transistorBurn.LATCH !== EXPECTED.latchBurn
+        || item.transaction.to.toLowerCase() !== EXPECTED.to.toLowerCase()
+        || item.transaction.chainId !== EXPECTED.chainId
+        || item.transaction.value !== "0x0"
+        || !item.transaction.data.startsWith("0x7bd3ac1d")) {
+      throw new Error("Circuit #41 交易清单校验失败（或交易方法不是 tapeout），本页已停止。");
+    }
+    manifest = item.transaction;
+
+    const p = provider();
+    if (p && await circuitAlreadyMinted(p, EXPECTED.expectedCircuitId)) {
+      $("notice").textContent = "检测到 Circuit #41 已经在链上——本页任务已完成，无需签名。";
+      $("notice").classList.add("ok");
+      $("status").className = "status ok";
+      $("status").textContent = "✔ 已在链上，本页停止提供签名功能。";
+      return;
+    }
+
+    $("notice").textContent = "清单校验通过：Circuit #41 · 2,059 NAND · 0 BNB。请用创建者钱包连接。";
+    $("notice").classList.add("ok");
+    $("facts").style.display = "block";
+    $("connect").style.display = "block";
+    $("gas").textContent = Number(item.estimatedGas).toLocaleString();
+  } catch (e) {
+    $("notice").textContent = "已停止：" + e.message;
+  }
+})();
+
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(label + "超时（" + (ms / 1000) + "秒无响应）——钱包弹窗可能被挡住了，检查是否有待处理的钱包弹窗，或退出重进本页")), ms)),
+  ]);
+}
+
+$("connect").addEventListener("click", async () => {
+  const btn = $("connect");
+  const status = $("connectStatus");
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = "连接中…";
+  status.textContent = "① 检测钱包 provider…";
+  try {
+    const p = provider();
+    if (!p) throw new Error("未检测到钱包 provider。请退出本页重新从 Binance Wallet App 首页打开，而不是用浏览器历史记录/收藏夹里的旧标签页。");
+    status.textContent = "② 确认链为 BNB Smart Chain…";
+    await withTimeout(ensureBsc(p), 15000, "切换链");
+    status.textContent = "③ 等待钱包弹窗授权连接…";
+    const accounts = await withTimeout(p.request({ method: "eth_requestAccounts" }), 30000, "请求账户授权");
+    const selected = accounts && accounts[0];
+    if (!selected) throw new Error("钱包未返回任何账户，请在钱包里确认已解锁并选中账户");
+    if (selected.toLowerCase() !== EXPECTED.creator.toLowerCase()) {
+      throw new Error("钱包地址不匹配：当前 " + short(selected) + "，必须使用创建者 " + EXPECTED.creator);
+    }
+    account = selected;
+    btn.textContent = short(selected) + " · 已连接";
+    status.textContent = "连接成功 ✓";
+    $("actions").style.display = "block";
+    $("notice").textContent = "创建者钱包已连接。页面不会自动发送；核对后勾选确认并签名。";
+    $("notice").classList.add("ok");
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = originalText;
+    status.textContent = "已停止 · " + e.message;
+    $("notice").textContent = "连接失败：" + e.message;
+  }
+});
+
+$("simulate").addEventListener("click", async () => {
+  try {
+    const p = provider();
+    if (!p) throw new Error("请在 Binance Wallet 中打开本页");
+    await ensureBsc(p);
+    const gas = await p.request({ method: "eth_estimateGas", params: [manifest] });
+    $("status").textContent = "模拟通过 · gas " + BigInt(gas).toString();
+  } catch (e) {
+    $("status").textContent = "模拟失败 · " + e.message;
+  }
+});
+
+$("sign").addEventListener("click", async () => {
+  try {
+    if (!account) throw new Error("请先连接创建者钱包");
+    if (!$("confirmBurn").checked) throw new Error("请先勾选销毁确认");
+    const code = ($("confirmCode").value || "").trim().toUpperCase();
+    if (code !== "332F") throw new Error("目标合约确认码不正确：请核对页面显示的 332F 后重新输入");
+    const p = provider();
+    if (!p) throw new Error("钱包 Provider 已断开");
+    await ensureBsc(p);
+    if (await circuitAlreadyMinted(p, EXPECTED.expectedCircuitId)) {
+      throw new Error("Circuit #41 已经在链上了，无需重复签名。");
+    }
+    const nextId = await liveNextId(p);
+    if (nextId !== 40n) throw new Error("链上 nextId=" + nextId + "，本交易要求 40。请停止并重新生成清单。");
+    $("status").textContent = "正在估计 gas…";
+    await p.request({ method: "eth_estimateGas", params: [manifest] });
+    $("status").textContent = "等待你在钱包弹窗中核对并确认…";
+    const hash = await p.request({ method: "eth_sendTransaction", params: [manifest] });
+    $("status").className = "status ok";
+    $("status").innerHTML = "已广播 · <a target=\"_blank\" href=\"https://bscscan.com/tx/" + hash + "\">在 BscScan 查看 ↗</a>（" + hash + "）";
+  } catch (e) {
+    $("status").textContent = "已停止 · " + e.message;
+  }
+});
+</script>
+</body>
+</html>
