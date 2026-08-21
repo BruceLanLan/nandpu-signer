@@ -323,8 +323,12 @@ $("loadTaskBtn").addEventListener("click", async () => {
   try {
     status.textContent = "读取中…";
     const circuits = $("claimCircuits").value.trim();
-    const id = BigInt($("claimId").value.trim());
-    const taskId = Number($("claimTaskId").value.trim());
+    const idRaw = $("claimId").value.trim();
+    const taskIdRaw = $("claimTaskId").value.trim();
+    if (!idRaw) throw new Error("电路 ID 是空的");
+    if (!taskIdRaw) throw new Error("题号是空的");
+    const id = BigInt(idRaw);
+    const taskId = Number(taskIdRaw);
     if (!ethers.isAddress(circuits)) throw new Error("处理器地址不对");
 
     const result = await withReadRetry(async (p) => {
@@ -575,10 +579,16 @@ $("claimBtn").addEventListener("click", async () => {
   }
 });
 
-// Prefill the lookup fields with the first known circuit for convenience.
+// Prefill the lookup/claim fields with the first known circuit for
+// convenience (2026-08-21: a real bug caught by testing before this
+// page was handed off -- claimId was left blank, and BigInt("") == 0n
+// silently resolves to circuitInfo(0), not an error, so it read as a
+// confusing "no circuit" revert instead of an obvious "field is empty").
 $("lookupCircuits").value = KNOWN[0].circuits;
 $("lookupId").value = KNOWN[0].id;
 $("claimCircuits").value = KNOWN[0].circuits;
+$("claimId").value = KNOWN[0].id;
+$("claimTaskId").value = KNOWN[0].taskId;
 
 refreshKnownMiners().catch(() => {});
 </script>
