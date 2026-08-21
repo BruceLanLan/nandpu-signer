@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>TapeOut · 挖矿方案 #1119-#1123 签字页</title>
+<title>TapeOut · 挖矿方案 #1125-#1129 签字页</title>
 <style>
   :root { color-scheme: dark; }
   body { margin:0; background:#0b0e13; color:#e6edf3; font-family:-apple-system,"PingFang SC",sans-serif; }
@@ -41,13 +41,13 @@
 <body>
 <main>
   <div class="eyebrow">TAPEOUT · BNB SMART CHAIN</div>
-  <h1>TapeOut 挖矿流片<br/>5 笔独立交易（#1119-#1123）</h1>
+  <h1>TapeOut 挖矿流片<br/>5 笔独立交易（#1125-#1129）</h1>
   <p class="lede">这不是 NANDPU。目标是官方 TapeOut 处理器，烧掉你钱包里的 485 枚 TapeOut NAND，流 5 颗竞赛电路：题 61 四乘四、题 31/149/147 大于判定、题 222 全 1 检测。网表来自 club 直出 hex，已对链上 tapeout() 做过 eth_call / estimateGas。TapeOut 的 tapeout 是无许可的，别人可能插号——每笔签名前页面会现拉 nextId，对不上就停。先签第一笔（392 门）。</p>
 
   <div class="notice" id="notice">正在校验交易清单…</div>
 
   <div class="card" id="facts" style="display:none">
-    <div class="row"><span>批次</span><b>5 笔 · TapeOut #1119 → #1123</b></div>
+    <div class="row"><span>批次</span><b>5 笔 · TapeOut #1125 → #1129</b></div>
     <div class="row"><span>显式燃烧合计</span><b>485 TapeOut NAND · 0 LATCH</b></div>
     <div class="row"><span>目标合约</span><b><code id="to">0xb1024b89886b9a34Aa4ff5F31C411D708b20a14C</code></b></div>
     <div class="row"><span>每笔发送金额</span><b>0 BNB</b></div>
@@ -85,13 +85,13 @@
 const EXPECTED = {
   chainId: "0x38",
   mode: "UNSIGNED_BATCH_RELEASE",
-  baseNextId: "1118",
+  baseNextId: "1124",
   order: [
-    { circuitId: "1119", circuit: "task-61-mul4x4", nand: 392, latch: 0, label: "题 61 · 4×4 乘法器" },
-    { circuitId: "1120", circuit: "task-31-gt4", nand: 42, latch: 0, label: "题 31 · 4 位大于" },
-    { circuitId: "1121", circuit: "task-149-gt3", nand: 29, latch: 0, label: "题 149 · 3 位大于" },
-    { circuitId: "1122", circuit: "task-147-gt2", nand: 16, latch: 0, label: "题 147 · 2 位大于" },
-    { circuitId: "1123", circuit: "task-222-allones4", nand: 6, latch: 0, label: "题 222 · 4 位全 1" },
+    { circuitId: "1125", circuit: "task-61-mul4x4", nand: 392, latch: 0, label: "题 61 · 4×4 乘法器" },
+    { circuitId: "1126", circuit: "task-31-gt4", nand: 42, latch: 0, label: "题 31 · 4 位大于" },
+    { circuitId: "1127", circuit: "task-149-gt3", nand: 29, latch: 0, label: "题 149 · 3 位大于" },
+    { circuitId: "1128", circuit: "task-147-gt2", nand: 16, latch: 0, label: "题 147 · 2 位大于" },
+    { circuitId: "1129", circuit: "task-222-allones4", nand: 6, latch: 0, label: "题 222 · 4 位全 1" },
   ],
   to: "0xb1024b89886b9a34Aa4ff5F31C411D708b20a14C",
   creator: "0x71c258DBBDf364a2204f010dc981493a33a9A720",
